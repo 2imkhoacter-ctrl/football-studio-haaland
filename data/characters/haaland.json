@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "character": "haaland",
+  "body": {"upA":103,"foreA":78,"thigh":128,"shin":113,"wUpA":36,"wFore":30,"wThigh":60,"wShin":36,"hand":15,"shoe":21,"neck":16,"chest":60,"waist":48,"hipW":46,"torsoH":146,"depthK":68,"depthW":75,"depthH":70,"shW":63,"depthS":79,"holeW":30,"holeD":30,"holeS":26},
+  "look": {"name":"HAALAND","num":9,"shirt":"#6cabdd","numc":"#ffffff","shorts":"#ffffff","socks":"#6cabdd","shoes":"#222222","skin":"#f1c9a5","hair":"#e8d27a"},
+  "head": {"size":162,"sink":6,"rot":4,"yaw":0,"x":5,"y":0},
+  "library": [
+    {"name":"Sút vào lưới Dortmund (lần đầu ở City)",
+     "pose":{"type":0,"rotFine":-25,"yaw":98,"hip":[241.8,341.1],
+      "limbs":{"hL":[-21.0,57.9,149.5],"hR":[35.8,18.8,-130.1],"fL":[24.4,142.5,-181.0],"fR":[-31.3,11.9,222.8]},
+      "poles":{"hL":[-0.6,0,-1],"hR":[0.6,0,-1],"fL":[4.4,104.4,-73.9],"fR":[-16.9,-40.0,120.4]}},
+     "headYaw":0,"headRot":4}
+  ]
+}

@@ -1,0 +1,10 @@
+work*/
+*.mp4
+*.traineddata
+transcript*.txt
+heads_sheet.png
+*.bak-*
+prep2.py
+prep_heads.py
+recv.py
+transcribe.py

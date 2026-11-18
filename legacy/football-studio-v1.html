@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Football Studio · Nguyên mẫu dựng cầu thủ 2D</title>
+<style>
+:root{color-scheme:dark;--bg:#111418;--panel:#1a1f26;--line:#2b333d;--txt:#eef2f6;--mute:#9aa6b2;--acc:#22d3ee}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:14px/1.4 -apple-system,"Segoe UI",Arial,sans-serif}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 350px;height:100dvh}
+.stage{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:8px;min-width:0}
+.stage svg{width:100%;height:100%;max-height:calc(100dvh - 60px);background:repeating-conic-gradient(#20262e 0% 25%,#1a1f26 0% 50%) 0 0/24px 24px;border-radius:12px;border:1px solid var(--line);touch-action:none;user-select:none;-webkit-user-select:none}
+/* Lock the drawing: only the drag handles react to the mouse, nothing gets selected. */
+#fig,#ground{pointer-events:none}
+.hint{color:var(--mute);font-size:12px;text-align:center}
+.panel{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+.panel h3{margin:0 0 6px;font-size:13px;color:var(--acc);letter-spacing:.02em}
+.box{border:1px solid var(--line);border-radius:10px;padding:10px;background:#161b21}
+.row{display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap}
+.row label{flex:1 1 90px;color:var(--mute);font-size:12px}
+.row label b{color:var(--txt)}
+button{background:#232b35;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer;font:inherit}
+button:hover{border-color:var(--acc)}
+button.on{background:#0e4a55;border-color:var(--acc)}
+button.big{background:var(--acc);color:#04222a;font-weight:700;border-color:var(--acc)}
+input[type=range]{flex:2 1 120px}
+input[type=color]{width:40px;height:28px;padding:0;border:1px solid var(--line);background:none;border-radius:6px}
+input[type=text],input[type=number]{background:#10151a;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;font:inherit}
+input[type=file]{font-size:12px;max-width:100%}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.grid4 button,.grid3 button{padding:6px 4px;font-size:12px}
+.poses{display:flex;flex-direction:column;gap:4px;max-height:140px;overflow:auto}
+.poses div{display:flex;gap:4px}.poses div button:first-child{flex:1;text-align:left}
+.sub{color:var(--mute);font-size:12px;margin:8px 0 2px}
+@media(max-width:820px){.app{grid-template-columns:1fr;grid-template-rows:55dvh auto}.panel{border-left:0;border-top:1px solid var(--line)}}
+</style></head><body>
+<div class="app">
+ <div class="stage">
+  <svg id="svg" viewBox="0 0 600 720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+   <g id="ground"><line x1="20" y1="640" x2="580" y2="640" stroke="#ffffff40" stroke-dasharray="6 6"/></g>
+   <defs>
+    <filter id="rim" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+     <feMorphology in="SourceAlpha" operator="dilate" radius="2.6" result="grow"/>
+     <feFlood flood-color="#101418"/>
+     <feComposite in2="grow" operator="in" result="rim"/>
+     <feMerge><feMergeNode in="rim"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+   </defs>
+   <g id="fig" filter="url(#rim)"></g>
+   <g id="handles"></g>
+  </svg>
+  <div class="hint">Kéo vòng <b>vàng</b> (tay), <b>xanh lá</b> (chân), <b>trắng</b> (khuỷu tay, đầu gối), ô <b>xanh</b> (hông), <b>hồng</b> (đầu), <b>cam</b> (xoay lật). Xương luôn giữ nguyên độ dài.</div>
+ </div>
+ <div class="panel">
+  <div class="box"><h3>QUAY NGƯỜI (trước ↔ sau lưng)</h3>
+   <div class="grid3" id="yawBtns"></div>
+   <div class="row"><label>Góc quay <b id="yawVal">0°</b></label><input type="range" id="yaw" min="-180" max="180" value="0"></div>
+  </div>
+  <div class="box"><h3>THÂN (vẽ sẵn 4 kiểu)</h3>
+   <div class="grid4" id="torsoBtns"></div>
+   <div class="row"><label>Xoay lật toàn thân <b id="rotVal">0°</b></label><input type="range" id="rotFine" min="-180" max="180" value="0"></div>
+   <div class="row"><button id="pin">Ghim chân: TẮT</button><button id="hnd" class="on">Hiện tay nắm</button></div>
+  </div>
+  <div class="box"><h3>TƯ THẾ</h3>
+   <div class="row"><button id="mirror">Lật gương</button><button id="reset">Về tư thế đứng</button></div>
+   <div class="row"><input type="text" id="poseName" placeholder="Tên tư thế (vd: Sút bóng)" style="flex:1 1 140px;width:auto"><button id="savePose">Lưu tư thế</button></div>
+   <div class="poses" id="poseList"></div>
+  </div>
+  <div class="box"><h3>HOẠT HÌNH (key frame)</h3>
+   <div class="sub">Đặt tư thế → kéo thanh thời gian tới mốc khác → đặt tư thế khác → "Thêm key". Bấm Phát để xem.</div>
+   <div class="row"><label>Thời gian <b id="tVal">0.00s</b></label><input type="range" id="tSlider" min="0" max="3" step="0.01" value="0"></div>
+   <div class="row"><label>Độ dài (giây)</label><input type="number" id="tDur" min="0.5" max="60" step="0.5" value="3"></div>
+   <div class="row"><button id="tAdd" class="big">＋ Thêm / thay key tại đây</button><button id="tPlay">▶ Phát</button></div>
+   <div class="row"><button id="tIdle">Thở + lắc đầu nhẹ</button><button id="tLoop" class="on">Lặp lại</button></div>
+   <div class="poses" id="keyList"></div>
+  </div>
+  <div class="box"><h3>THÂN HÌNH (to nhỏ từng bộ phận)</h3>
+   <div class="row"><button id="bodyLock" class="on">🔒 Thân trên + dưới DÍNH LIỀN (bấm để mở khóa)</button></div>
+   <div id="bodySliders"></div>
+   <div class="row"><button id="bodyReset">Về tỉ lệ mặc định</button></div>
+  </div>
+  <div class="box"><h3>CẦU THỦ</h3>
+   <div class="row"><label>Tên (in sau lưng)</label><input type="text" id="pName" value="HAALAND"></div>
+   <div class="row"><label>Số áo</label><input type="number" id="pNum" value="9" min="0" max="99"></div>
+   <div class="row"><label>Màu áo</label><input type="color" id="cShirt" value="#6cabdd"><label>Màu số</label><input type="color" id="cNum" value="#ffffff"></div>
+   <div class="row"><label>Quần</label><input type="color" id="cShorts" value="#ffffff"><label>Tất</label><input type="color" id="cSocks" value="#6cabdd"></div>
+   <div class="row"><label>Giày</label><input type="color" id="cShoes" value="#222222"><label>Da</label><input type="color" id="cSkin" value="#f1c9a5"></div>
+   <div class="row"><label>Tóc (đầu mặc định)</label><input type="color" id="cHair" value="#e8d27a"></div>
+  </div>
+  <div class="box"><h3>ĐẦU (ảnh cartoon PNG nền trong suốt)</h3>
+   <div class="row"><button id="headLoad">Nạp đầu theo tên cầu thủ (data/heads)</button></div>
+   <div class="sub" id="headStatus"></div>
+   <div class="sub">Mặt trước</div><input type="file" id="headFront" accept="image/*">
+   <div class="sub">Mặt nghiêng (vẽ nhìn sang PHẢI, tự lật khi quay trái)</div><input type="file" id="headSide" accept="image/*">
+   <div class="sub">Sau gáy</div><input type="file" id="headBack" accept="image/*">
+   <div class="row"><label>Độ lún cổ (cổ ngắn) <b id="hSinkVal">34</b></label><input type="range" id="hSink" min="-10" max="70" value="34"></div>
+   <div class="row"><label>Kích thước</label><input type="range" id="hSize" min="60" max="320" value="200"></div>
+   <div class="row"><label>Quay đầu (trước ↔ sau) <b id="hYawVal">0°</b></label><input type="range" id="hYaw" min="-180" max="180" value="0"></div>
+   <div class="row"><label>Nghiêng đầu <b id="hRotVal">0°</b></label><input type="range" id="hRot" min="-180" max="180" value="0"></div>
+   <div class="row"><button id="headReset">Đầu theo thân (về 0°)</button></div>
+   <div class="row"><label>Dịch ngang</label><input type="range" id="hX" min="-40" max="40" value="0"></div>
+   <div class="row"><label>Dịch dọc</label><input type="range" id="hY" min="-60" max="60" value="0"></div>
+   <div class="row"><button id="clearHead">Xóa ảnh đầu, dùng đầu mặc định</button></div>
+  </div>
+  <div class="box"><h3>XUẤT / LƯU</h3>
+   <div class="row"><button class="big" id="exPng">Xuất PNG 3× (nền trong suốt)</button></div>
+   <div class="row"><button id="exJson">Lưu JSON</button><button id="imJson">Nạp JSON</button><input type="file" id="jsonFile" accept=".json" hidden></div>
+  </div>
+ </div>
+</div>
+<script>
+(function(){
+const NS='http://www.w3.org/2000/svg';
+const GROUND=640, SHOE=14, OUT='#101418';
+const L={upA:72,foreA:66,thigh:98,shin:92};
+// Torso anchors in its own space (facing the viewer, upright), origin at the hip centre.
+// Body proportions (all editable in the "THÂN HÌNH" panel): bone lengths, thicknesses, torso shape.
+const DEF_BODY={upA:72,foreA:66,thigh:98,shin:92,wUpA:30,wFore:24,wThigh:40,wShin:28,hand:14,shoe:21,neck:16,chest:44,waist:40,hipW:46,torsoH:146,depthK:75,depthW:75,depthH:70,shW:100,depthS:75,holeW:24,holeD:24,holeS:24,gap:0};
+const BODY_UI=[
+ ['Độ dài',[['Cánh tay trên','upA',40,120],['Cẳng tay','foreA',40,110],['Đùi','thigh',60,150],['Cẳng chân','shin',60,140]]],
+ ['Độ to',[['Bắp tay','wUpA',12,56],['Cẳng tay','wFore',10,48],['Đùi','wThigh',18,70],['Bắp chân','wShin',12,54],['Bàn tay','hand',7,26],['Giày','shoe',10,36],['Cổ','neck',8,28]]],
+ ['Lỗ cổ áo (cổ cầu thủ cắm vào đây)',[['Độ rộng lỗ (nhìn trước)','holeW',8,44],['Độ rộng lỗ (nhìn nghiêng)','holeS',4,60],['Độ sâu lỗ','holeD',4,50]]],
+ ['Vai trên / cổ vai (chỗ áo gặp cổ)',[['Rộng vai trên (nhìn trước, % của ngực)','shW',50,120],['Dày vai trên (nhìn nghiêng, % bề ngang)','depthS',20,130]]],
+ ['Tách thân dưới khỏi áo (chỉ chỉnh được khi MỞ KHÓA)',[['Thân dưới lên (-) / xuống (+)','gap',-40,70]]],
+ ['Thân',[['Ngực / vai (nhìn trước)','chest',26,70],['Dày lưng trên / ngực (nhìn nghiêng, % bề ngang)','depthK',30,130],['Eo','waist',22,64],['Dày eo (nhìn nghiêng, % bề ngang)','depthW',30,130],['Hông / quần','hipW',28,70],['Dày hông (nhìn nghiêng, % bề ngang)','depthH',30,130],['Chiều cao thân','torsoH',100,200]]]
+];
+// Torso anchors in its own space (facing the viewer, upright), origin at the hip centre; follow the proportions.
+function base(){const b=S.body;return{neck:[0,-b.torsoH],shL:[-(b.chest-4),-(b.torsoH-20)],shR:[b.chest-4,-(b.torsoH-20)],hipL:[-b.hipW*.43,34+b.gap],hipR:[b.hipW*.43,34+b.gap]}}
+// Which anchor each hand/foot hangs from.
+const LIMB={hL:'shL',hR:'shR',fL:'hipL',fR:'hipR'};
+const TORSOS=[
+ {name:'Thẳng',rot:0,sy:1},
+ {name:'Khom',rot:0,sy:.76},
+ {name:'Nghiêng trái',rot:-16,sy:1},
+ {name:'Nghiêng phải',rot:16,sy:1}
+];
+const YAWS=[['Trước',0],['3/4 phải',45],['Ngang phải',90],['Sau lưng',180],['Ngang trái',-90],['3/4 trái',-45]];
+// Hands and feet are stored in the BODY's own 3D frame, relative to their shoulder / hip:
+//   [x = sideways, y = up/down, z = forward/back].  Turning the body just re-projects them.
+const DEFAULT_POSE=()=>({type:0,rotFine:0,yaw:0,hip:[300,412],
+ limbs:{hL:[-55,119,0],hR:[55,119,0],fL:[-18,180,0],fR:[18,180,0]},
+ // bend direction of each elbow / knee (body frame); changed by dragging the joint itself
+ poles:{hL:[-.6,0,-1],hR:[.6,0,-1],fL:[-.35,0,1],fR:[.35,0,1]}});
+const S={
+ pose:DEFAULT_POSE(), pins:false, showHandles:true, body:Object.assign({},DEF_BODY),
+ look:{name:'HAALAND',num:9,shirt:'#6cabdd',numc:'#ffffff',shorts:'#ffffff',socks:'#6cabdd',shoes:'#222222',skin:'#f1c9a5',hair:'#e8d27a'},
+ head:{front:null,q45:null,side:null,q135:null,back:null,size:200,sink:34,rot:0,yaw:0,x:0,y:0}, // yaw/rot = head turn & tilt on top of the body
+ library:[]
+};
+const $=id=>document.getElementById(id);
+const svg=$('svg'),fig=$('fig'),handles=$('handles');
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+const rad=d=>d*Math.PI/180;
+const wrap=v=>((v+540)%360)-180;
+
+// ---- body geometry -------------------------------------------------------
+// yaw = turning around the vertical axis (0 front, ±90 side, 180 back).
+function view(){const y=rad(S.pose.yaw);return{c:Math.cos(y),s:Math.sin(y),w:Math.max(Math.abs(Math.cos(y)),.42),back:Math.cos(y)<0,face:Math.sin(y)>=0?1:-1,side:Math.abs(Math.sin(y))>.5}}
+function planeRot(){return TORSOS[S.pose.type].rot+S.pose.rotFine}
+function rotV(x,y,deg){const a=rad(deg),c=Math.cos(a),s=Math.sin(a);return [x*c-y*s,x*s+y*c]}
+// Everything about the limbs is solved in the body's own 3D frame (x sideways, y down, z forward)
+// and only then projected on screen: bones keep their true length and foreshorten when turned.
+function project(p){
+ const V=view(),X=p[0]*V.c+p[2]*V.s,D=-p[0]*V.s+p[2]*V.c,v=rotV(X,p[1],planeRot());
+ const w=[S.pose.hip[0]+v[0],S.pose.hip[1]+v[1]];w.z=D;return w;
+}
+function anchor3(k){const p=base()[k];return [p[0],p[1]*TORSOS[S.pose.type].sy,0]}
+function anchors(){const a={};for(const k of ['neck','shL','shR','hipL','hipR'])a[k]=project(anchor3(k));return a}
+const add3=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],sub3=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const dot3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],len3=a=>Math.hypot(a[0],a[1],a[2]),mul3=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+function target(k){return project(add3(anchor3(LIMB[k]),S.pose.limbs[k]))}
+// world point -> body-frame offset. Screen-horizontal motion is spread over the body's
+// sideways/forward axes according to the current turn, so nothing jumps when turning later.
+function setTarget(k,w){
+ const V=view(),o=S.pose.limbs[k],an=project(anchor3(LIMB[k]));
+ const v=rotV(w[0]-an[0],w[1]-an[1],-planeRot());
+ const d=v[0]-(o[0]*V.c+o[2]*V.s);
+ o[0]+=d*V.c;o[2]+=d*V.s;o[1]=v[1];
+}
+function worldFeet(){return [target('fL'),target('fR')]}
+function keepFeet(fn){const f=worldFeet();fn();if(S.pins){setTarget('fL',f[0]);setTarget('fR',f[1])}}
+
+// Which way each joint bends, in the body frame: knees forward (a little outward), elbows back (and outward).
+const POLE={hL:[-.6,0,-1],hR:[.6,0,-1],fL:[-.35,0,1],fR:[.35,0,1]};
+const LEN=new Proxy({},{get:(_,k)=>{const b=S.body;return k[0]==='h'?[b.upA,b.foreA]:[b.thigh,b.shin]}});
+function ik3(a,t,l1,l2,pole){
+ const v=sub3(t,a),d=len3(v)||1e-4,u=mul3(v,1/d);
+ const dd=Math.min(l1+l2-0.5,Math.max(Math.abs(l1-l2)+1,d));
+ let p=sub3(pole,mul3(u,dot3(pole,u)));
+ if(len3(p)<1e-3)p=Math.abs(u[1])<.9?sub3([0,1,0],mul3(u,u[1])):sub3([1,0,0],mul3(u,u[0]));
+ p=mul3(p,1/len3(p));
+ const A=Math.acos(Math.max(-1,Math.min(1,(l1*l1+dd*dd-l2*l2)/(2*l1*dd))));
+ return [add3(a,add3(mul3(u,l1*Math.cos(A)),mul3(p,l1*Math.sin(A)))),add3(a,mul3(u,dd))];
+}
+function solve(k){
+ const a=anchor3(LIMB[k]),[l1,l2]=LEN[k],pole=S.pose.poles[k]||POLE[k];
+ let [j,e]=ik3(a,add3(a,S.pose.limbs[k]),l1,l2,pole);
+ if(k[0]==='f'){ // a foot never goes under the ground line
+  const pe=project(e);
+  if(pe[1]>GROUND-SHOE){setTarget(k,[pe[0],GROUND-SHOE]);[j,e]=ik3(a,add3(a,S.pose.limbs[k]),l1,l2,pole)}
+ }
+ S.pose.limbs[k]=sub3(e,a); // bones never stretch: keep only what the limb can reach
+ return {a,j,e,A:project(a),J:project(j),E:project(e)};
+}
+// Drag an elbow / knee: the upper bone swings around the shoulder / hip towards the mouse,
+// the lower bone keeps its direction and follows. Bone lengths never change.
+function moveJoint(k,w){
+ const V=view(),s=solve(k),a=s.a,[l1]=LEN[k];
+ const an=project(a),v=rotV(w[0]-an[0],w[1]-an[1],-planeRot());
+ const hidden=[-V.s,0,V.c],h0=dot3(sub3(s.j,a),hidden); // keep the depth the screen can't show
+ let dir=add3(add3(mul3([V.c,0,V.s],v[0]),[0,v[1],0]),mul3(hidden,h0));
+ const n=len3(dir);if(n<1e-3)return;dir=mul3(dir,1/n);
+ const j2=add3(a,mul3(dir,l1)),e2=add3(j2,sub3(s.e,s.j));
+ S.pose.limbs[k]=sub3(e2,a);
+ S.pose.poles[k]=sub3(j2,a); // remember where this joint bends to
+}
+const clampFoot=f=>[f[0],Math.min(f[1],GROUND-SHOE)];
+
+// ---- smooth drawing --------------------------------------------------------
+// Parts are grouped in layers. In each layer ALL outlines are drawn first and ALL fills on top,
+// so overlapping parts melt into one silhouette: no outline circles at elbows, knees, shoulders, hips.
+// Outline system: ONE even rim around the whole silhouette (SVG filter on #fig, see index of the page),
+// plus a THIN line (OW) where parts overlap inside it. So turned views no longer show heavy lines
+// across the chest or around every limb that crosses the body.
+const OW=1.6;
+const lp=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+// tapered capsule between two circles = 2 circles + the polygon of their outer tangents
+function capsule(a,b,r1,r2){
+ const out=[{c:a,r:r1},{c:b,r:r2}],dx=b[0]-a[0],dy=b[1]-a[1],d=Math.hypot(dx,dy);
+ if(d>Math.abs(r1-r2)+0.01){
+  const t=Math.atan2(dy,dx),al=Math.acos(Math.max(-1,Math.min(1,(r1-r2)/d))),pt=(c,r,f)=>[c[0]+r*Math.cos(f),c[1]+r*Math.sin(f)];
+  out.push({poly:[pt(a,r1,t+al),pt(b,r2,t+al),pt(b,r2,t-al),pt(a,r1,t-al)]});
+ }
+ return out;
+}
+function drawShape(g,s,fill,outline){
+ const st=outline?{stroke:OUT,'stroke-width':OW*2,'stroke-linejoin':'round'}:{};
+ if(s.poly)el('polygon',Object.assign({points:s.poly.map(p=>p.join(',')).join(' '),fill},st),g);
+ else el('circle',Object.assign({cx:s.c[0],cy:s.c[1],r:s.r,fill},st),g);
+}
+// item = {shapes:[...],fill} | {path,tf,fill} | {raw:fn(g)} (raw = decoration, no outline)
+function drawLayer(items){
+ const g=el('g',{},fig),og=el('g',{},g);
+ for(const it of items){
+  if(it.shapes)it.shapes.forEach(s=>drawShape(og,s,OUT,true));
+  else if(it.path)el('path',{d:it.path,fill:OUT,stroke:OUT,'stroke-width':OW*2,'stroke-linejoin':'round'},og);
+ }
+ for(const it of items){
+  if(it.shapes)it.shapes.forEach(s=>drawShape(g,s,it.fill,false));
+  else if(it.path)el('path',{d:it.path,fill:it.fill},g);
+  else if(it.raw)it.raw(g);
+ }
+}
+
+let last={};
+function render(){
+ const P=S.pose,K=S.look,B=S.body,V=view(),A=anchors(),T=TORSOS[P.type],pr=planeRot();
+ fig.innerHTML='';
+ const sol={fL:solve('fL'),fR:solve('fR'),hL:solve('hL'),hR:solve('hR')};
+ last={hL:sol.hL.E,hR:sol.hR.E,fL:sol.fL.E,fR:sol.fR.E,jhL:sol.hL.J,jhR:sol.hR.J,jfL:sol.fL.J,jfR:sol.fR.J};
+ const depth=s=>(s.A.z+s.J.z+s.E.z)/3;
+
+ // A leg: tapered skin (thigh -> knee -> ankle), sock from just under the knee, shorts over half the thigh, shoe.
+ const legItems=(k)=>{
+  const s=sol[k],out=k==='fL'?-1:1,A2=s.A,J=s.J,E=s.E;
+  const heel=project(add3(s.e,[0,9,-8])),toe=project(add3(s.e,[out*5,9,24])); // shoe follows the 3D foot
+  // the leg really starts INSIDE the pelvis (towards the body centre, up under the shirt hem), not at the hip surface
+  const inner=project(add3(anchor3(k==='fL'?'hipL':'hipR'),[(k==='fL'?1:-1)*B.hipW*.3,-10,0]));
+  return [
+   {fill:K.skin,shapes:[...capsule(inner,J,B.wThigh/2,B.wThigh*.34),...capsule(J,E,B.wShin*.5,B.wShin*.3)]},
+   {fill:K.socks,shapes:capsule(lp(J,E,.2),E,B.wShin*.5+1,B.wShin*.32+1)},
+   // shorts leg: a tube that starts INSIDE the pelvis (towards the centre of the body, under the shirt) and runs
+   // half-way down the thigh, so the leg goes into the shorts like into a pair of trousers: no joint is ever visible
+   {fill:K.shorts,shapes:capsule(inner,lp(A2,J,.52),B.wThigh*.5+7,B.wThigh*.43+2)},
+   {fill:K.shoes,shapes:capsule(heel,toe,B.shoe/2,B.shoe*.43)}
+  ];
+ };
+ // An arm: tapered skin (shoulder -> elbow -> wrist), short sleeve over half the upper arm, hand.
+ const armItems=(k)=>{
+  const s=sol[k];
+  return [
+   {fill:K.skin,shapes:[...capsule(s.A,s.J,B.wUpA/2,B.wUpA*.4),...capsule(s.J,s.E,B.wFore*.5,B.wFore*.36)]},
+   {fill:K.shirt,shapes:capsule(s.A,lp(s.A,s.J,.55),B.wUpA/2+1.5,B.wUpA*.46+1.5)},
+   {fill:K.skin,shapes:[{c:s.E,r:B.hand}]}
+  ];
+ };
+ const byDepth=ks=>ks.sort((a,b)=>depth(sol[a])-depth(sol[b]));
+ const legs=byDepth(['fL','fR']),arms=byDepth(['hL','hR']);
+ // Layer choice: the side of the body the limb hangs from (shoulder/hip depth when turned),
+ // plus how far the limb itself reaches forward/back from that joint.
+ const reach=k=>{const s=sol[k];return (s.J.z+s.E.z)/2-s.A.z};
+ const isBack=k=>{const s=sol[k];return s.A.z<-8||reach(k)<-30};
+ const isFront=k=>{const s=sol[k];return !isBack(k)&&(k[0]==='h'?(s.A.z>8||reach(k)>20):reach(k)>115)}; // legs go over the shirt only when truly kicked at the viewer
+
+ // torso: shirt with rounded shoulders, shorts with a crotch notch, neck going into the collar
+ const ch=B.chest,wa=B.waist,hw=B.hipW,th=B.torsoH,fs=Math.min(ch/44,th/146);
+ const tf=`translate(${P.hip[0]},${P.hip[1]}) rotate(${pr}) scale(${V.w},${T.sy})`; // only used for the print
+ // torso outlines are built directly in screen coordinates so every outline has the same thickness
+ // On-screen width of a body section = its outline seen from the current angle: an ellipse of
+ // half-width (front) x half-depth (side). So 3/4 and side views keep the body's real thickness.
+ const seen=(halfW,halfD)=>Math.hypot(V.c,V.s*halfD/halfW);
+ // thickness follows the width: chest and hips keep the same depth/width ratio, so a bigger chest gets a thicker back
+ // chest, waist and hips each have their own width AND thickness, so the upper back and the waist can differ
+ const fxS=seen(ch,ch*B.depthK/100), fxW=seen(wa,wa*B.depthW/100), fxH=seen(hw,hw*B.depthH/100);
+ // the top of the shoulders (where the shirt meets the neck) has its own width and thickness too
+ const fxSh=seen(ch,ch*B.depthS/100);
+ const Ms=(x,y)=>M(x,y,fxSh);
+ const M=(x,y,f=fxS)=>{const v=rotV(x*f,y*T.sy,pr);return (P.hip[0]+v[0]).toFixed(1)+','+(P.hip[1]+v[1]).toFixed(1)};
+ let neckW=0;
+ // neck hole in the shirt: its half-width and depth are set by the user (sliders "Lỗ cổ áo")
+ // the hole can never be wider than the neckline between the shoulders (else the outline folds back on itself)
+ const holeMax=Math.max(8,Math.floor(ch*.85));
+ const hs_=$('b_holeW');if(hs_){hs_.max=holeMax;if(+hs_.value>holeMax){hs_.value=holeMax;B.holeW=holeMax;$('bv_holeW').textContent=holeMax}}
+ const hw2=Math.min(B.holeW,holeMax),hd=B.holeD*(V.back?.5:1);
+ // the shoulder points slide outward when the hole gets wide, so the top edge never folds back on itself
+ const so=Math.max(hw2+5,Math.min(ch*.97,Math.max(ch*.62,hw2+7))*B.shW/100);
+ const Mw=(x,y)=>M(x,y,fxW);
+ // The hole has its OWN width when seen from the side (holeS), separate from the width seen from the front (holeW).
+ // The shoulder corners are kept just outside it, so the outline can never fold back.
+ // side-view hole width can't exceed the shoulder thickness (else a spike pokes out behind the neck); the slider shrinks with it
+ const holeSMax=Math.max(4,Math.floor(so*B.depthS/100*.95));
+ const hsl=$('b_holeS');if(hsl){hsl.max=holeSMax;if(+hsl.value>holeSMax){hsl.value=holeSMax;B.holeS=holeSMax;$('bv_holeS').textContent=holeSMax}}
+ const fxHole=seen(hw2,Math.min(B.holeS,holeSMax)), fxC=Math.max(fxSh,fxHole*(hw2+4)/so);
+ const Mc=(x,y)=>M(x,y,fxC), Mo=(x,y)=>M(x,y,fxHole);
+ const shirtOld=`M${Mc(-so,-(th+3))} L${Mo(-hw2,-(th+5))} Q${Mo(0,-(th-hd))} ${Mo(hw2,-(th+5))} L${Mc(so,-(th+3))} Q${M(ch,-(th-1))} ${M(ch,-(th-24))} L${Mw(wa,14)} Q${Mw(0,24)} ${Mw(-wa,14)} L${M(-ch,-(th-24))} Q${M(-ch,-(th-1))} ${Mc(-so,-(th+3))} Z`;
+ const Mh=(x,y)=>M(x,y,fxH);
+ // the shorts body is only the waist/hip part; the two leg tubes (drawn with the legs) make up the rest
+ const G=B.gap; // the lower body (shorts + legs) can be slid up/down inside/below the shirt when unlocked
+ const shorts=`M${Mw(-(wa+1),4+G)} L${Mw(wa+1,4+G)} L${Mh(hw*.96,32+G)} Q${Mh(0,46+G)} ${Mh(-hw*.96,32+G)} Z`;
+ const neckTop=project(add3(anchor3('neck'),[0,-B.neck*1.1,0]));
+ // The number is a DECAL stuck on the shirt's front (or back) surface, not text floating over it:
+ //  - it sits on the surface, so when the body turns its centre slides sideways by (half thickness x sin(turn))
+ //  - it is squeezed horizontally by |cos(turn)| like anything painted on a flat surface, and vanishes edge-on
+ //  - its size follows the chest width and torso height, and it is fitted to stay inside the shirt
+ const print={raw:g=>{
+  const showFront=!V.back&&V.c>.1, showBack=V.back&&V.c<-.1;
+  if(!(showFront||showBack))return;
+  const halfD=ch*B.depthK/100, xoff=(showFront?1:-1)*halfD*V.s, sx=Math.abs(V.c);
+  const digits=String(K.num).length||1, nameLen=Math.max(K.name.length,1);
+  const numSize=Math.max(8,Math.min((showBack?84:72)*fs, (ch*1.55)/(digits*.62), th*.36));
+  const numY=showBack?-th*.36:-th*.40, nameY=-th*.74;
+  const pg=el('g',{transform:`translate(${P.hip[0]},${P.hip[1]}) rotate(${pr}) scale(1,${T.sy}) translate(${xoff},0) scale(${sx},${1/T.sy})`},g);
+  const base={'text-anchor':'middle','dominant-baseline':'central','font-weight':800,fill:K.numc};
+  const num=el('text',Object.assign({x:0,y:numY*T.sy,'font-size':numSize,'font-family':'Arial Black,Arial,sans-serif'},base),pg);num.textContent=K.num;
+  if(showBack){const nm=el('text',Object.assign({x:0,y:nameY*T.sy,'font-size':Math.min(18*fs,ch*1.5/(nameLen*.72)),'font-family':'Arial,sans-serif','letter-spacing':.5},base),pg);nm.textContent=K.name}
+ }};
+
+ // 1) limbs behind the body
+ drawLayer([...arms.filter(isBack).flatMap(armItems),...legs.filter(isBack).flatMap(legItems)]);
+ // head: the drawn head (with its own neck) goes BEHIND the shirt so the collar covers the seam.
+ const H=S.head,nk=A.neck,cx=nk[0]+H.x,cy=nk[1]-H.size*0.42+H.y;
+ const hy=rad(P.yaw+(H.yaw||0)),hc=Math.cos(hy),hsn=Math.sin(hy),hface=hsn>=0?1:-1;
+ const which=hc>.35?'front':hc<-.35?'back':'side';
+ // five drawn views (0, 45, 90, 135, 180 deg): pick the nearest one that has an image; mirror it for the left side
+ const ang=Math.abs(wrap(P.yaw+(H.yaw||0))),VIEWS=[[0,'front'],[45,'q45'],[90,'side'],[135,'q135'],[180,'back']];
+ const near=VIEWS.filter(v=>H[v[1]]).sort((a,b)=>Math.abs(a[0]-ang)-Math.abs(b[0]-ang))[0];
+ const useKey=near&&Math.abs(near[0]-ang)<=50?near[1]:null, src=useKey?H[useKey]:null;
+ if(src){
+  // Place the image by ITS OWN neck (centre + bottom edge of the neck, measured automatically when the image loads)
+  // and put that on the body's neck, a little inside the collar. Works for any player's art, no hand tuning.
+  const meta=(S.headMeta&&S.headMeta[useKey])||{nx:.5,by:.97,nw:.3};
+  const flip=useKey!=='front'&&useKey!=='back'&&hface<0, nxp=flip?1-meta.nx:meta.nx;
+  // sink: how far the head's own neck is pushed down into the shirt (a short cartoon neck)
+  const ix=nk[0]+H.x-nxp*H.size, iy=nk[1]+B.neck*.9+(H.sink||0)+H.y-meta.by*H.size;
+  neckW=meta.nw*H.size;
+  const hg=el('g',{transform:`rotate(${pr+H.rot} ${nk[0]} ${nk[1]})`},fig);
+  const ig=el('g',{transform:flip?`translate(${2*(ix+H.size/2)},0) scale(-1,1)`:''},hg);
+  const im=el('image',{x:ix,y:iy,width:H.size,height:H.size,preserveAspectRatio:'xMidYMid meet'},ig);
+  im.setAttribute('href',src);im.setAttributeNS('http://www.w3.org/1999/xlink','href',src);
+ }
+ // 2) body + every limb that is beside it: one merged silhouette
+ drawLayer([
+  ...legs.filter(k=>!isBack(k)&&!isFront(k)).flatMap(legItems),
+  ...(src?[]:[{fill:K.skin,shapes:capsule(neckTop,A.neck,B.neck*.85,B.neck)}]),
+  {path:shorts,fill:K.shorts},
+  {path:shirtOld,fill:K.shirt},
+  print,
+  ...arms.filter(k=>!isBack(k)&&!isFront(k)).flatMap(armItems)
+ ]);
+ // 3) limbs clearly in front of the body (keep their outline over the shirt)
+ drawLayer([...legs.filter(isFront).flatMap(legItems),...arms.filter(isFront).flatMap(armItems)]);
+ // head without an image: the simple default head goes on top
+ if(!src)drawDefaultHead(el('g',{transform:`rotate(${pr+H.rot} ${nk[0]} ${nk[1]})`},fig),cx,cy,H.size*.36,which,hface,which==='front'?hsn:(which==='back'?-hsn:0));
+ $('hYawVal').textContent=Math.round(H.yaw||0)+'°';$('hRotVal').textContent=Math.round(H.rot)+'°';
+
+ // handles
+ handles.innerHTML='';handles.style.display=S.showHandles?'':'none';
+ const tot=rad(pr),rp=[P.hip[0]+260*Math.sin(tot),P.hip[1]-260*Math.cos(tot)];
+ el('line',{x1:P.hip[0],y1:P.hip[1],x2:rp[0],y2:rp[1],stroke:'#fb923c','stroke-width':2,'stroke-dasharray':'4 5'},handles).style.pointerEvents='none';
+ const hs=[['rot',rp,'#fb923c',13],['hip',P.hip,'#22d3ee',14,'rect'],
+  ['jhL',last.jhL,'#e2e8f0',9],['jhR',last.jhR,'#e2e8f0',9],['jfL',last.jfL,'#e2e8f0',9],['jfR',last.jfR,'#e2e8f0',9],['hL',last.hL,'#facc15',12],['hR',last.hR,'#facc15',12],['fL',last.fL,'#4ade80',12],['fR',last.fR,'#4ade80',12],['head',[cx,cy],'#f472b6',12]];
+ hs.forEach(([id,p,c,r,shape])=>{
+  const e=shape==='rect'?el('rect',{x:p[0]-r,y:p[1]-r,width:2*r,height:2*r,rx:4},handles):el('circle',{cx:p[0],cy:p[1],r},handles);
+  e.setAttribute('fill',c+'55');e.setAttribute('stroke',c);e.setAttribute('stroke-width',3);e.setAttribute('data-h',id);e.style.cursor='grab';
+ });
+ if(S.pins)[last.fL,last.fR].forEach(f=>el('circle',{cx:f[0],cy:f[1]+SHOE,r:3,fill:'#4ade80'},handles));
+ $('rotVal').textContent=Math.round(pr)+'°';$('yawVal').textContent=Math.round(P.yaw)+'°';
+ [...$('yawBtns').children].forEach((b,i)=>b.classList.toggle('on',Math.abs(wrap(P.yaw-YAWS[i][1]))<1));
+}
+function drawDefaultHead(g,cx,cy,r,which,f,turn){
+ const K=S.look,o=r*.45*(turn||0); // o: features slide sideways while the head turns (3/4 views)
+ el('circle',{cx,cy,r,fill:which==='back'?K.hair:K.skin,stroke:OUT,'stroke-width':5},g);
+ if(which==='back'){
+  el('path',{d:`M${cx-r*.55+o},${cy+r*.7} Q${cx+o},${cy+r*.95} ${cx+r*.55+o},${cy+r*.7}`,fill:'none',stroke:'#00000030','stroke-width':4},g);
+  if(Math.abs(turn)>.2){const ex=cx-Math.sign(turn)*r*.9;el('circle',{cx:ex,cy:cy+r*.05,r:r*.15,fill:K.skin,stroke:OUT,'stroke-width':3},g)} // an ear peeks out
+  return;
+ }
+ if(which==='front'){
+  el('circle',{cx:cx-r*.38+o,cy:cy-r*.1,r:r*.1,fill:OUT},g);el('circle',{cx:cx+r*.38+o,cy:cy-r*.1,r:r*.1,fill:OUT},g);
+  el('path',{d:`M${cx-r*.3+o},${cy+r*.35} Q${cx+o},${cy+r*.62} ${cx+r*.3+o},${cy+r*.35}`,fill:'none',stroke:OUT,'stroke-width':4,'stroke-linecap':'round'},g);
+  el('path',{d:`M${cx-r},${cy-r*.2} Q${cx+o*.5},${cy-r*1.5} ${cx+r},${cy-r*.2} Q${cx+o*.5},${cy-r*.75} ${cx-r},${cy-r*.2}`,fill:K.hair,stroke:OUT,'stroke-width':4},g);
+  return;
+ }
+ // side profile looking towards f (+1 right / -1 left)
+ el('path',{d:`M${cx+f*r*.92},${cy-r*.05} L${cx+f*r*1.18},${cy+r*.12} L${cx+f*r*.9},${cy+r*.22}`,fill:K.skin,stroke:OUT,'stroke-width':4,'stroke-linejoin':'round'},g);
+ el('circle',{cx:cx+f*r*.5,cy:cy-r*.12,r:r*.1,fill:OUT},g);
+ el('path',{d:`M${cx+f*r*.35},${cy+r*.45} Q${cx+f*r*.6},${cy+r*.55} ${cx+f*r*.78},${cy+r*.42}`,fill:'none',stroke:OUT,'stroke-width':4,'stroke-linecap':'round'},g);
+ el('path',{d:`M${cx+f*r*.6},${cy-r*.75} Q${cx},${cy-r*1.35} ${cx-f*r*1.02},${cy-r*.1} Q${cx-f*r*.9},${cy+r*.55} ${cx-f*r*.45},${cy+r*.75} Q${cx-f*r*.1},${cy-r*.2} ${cx+f*r*.6},${cy-r*.75}`,fill:K.hair,stroke:OUT,'stroke-width':4},g);
+ el('circle',{cx:cx-f*r*.15,cy:cy+r*.05,r:r*.16,fill:K.skin,stroke:OUT,'stroke-width':3},g);
+}
+
+// ---- whole-body changes (limbs follow automatically; pinned feet stay put)
+function setYaw(v){keepFeet(()=>{S.pose.yaw=wrap(v)});$('yaw').value=Math.round(S.pose.yaw)}
+function setRotation(v){keepFeet(()=>{S.pose.rotFine=wrap(v)});$('rotFine').value=Math.round(S.pose.rotFine)}
+
+// ---- dragging
+let drag=null;
+function svgPt(ev){const pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());return [p.x,p.y]}
+svg.addEventListener('pointerdown',ev=>{
+ const h=ev.target.getAttribute&&ev.target.getAttribute('data-h');if(!h)return;
+ svg.setPointerCapture(ev.pointerId);
+ const p=svgPt(ev),cur=h==='hip'?S.pose.hip:last[h];
+ drag={h,off:cur?[cur[0]-p[0],cur[1]-p[1]]:[0,0]};
+});
+svg.addEventListener('pointermove',ev=>{
+ if(!drag)return;
+ const p=svgPt(ev),P=S.pose,t=[p[0]+drag.off[0],p[1]+drag.off[1]];
+ if(drag.h==='hip'){
+  const old=P.hip.slice(),feet=worldFeet();let nh=t.slice();
+  if(S.pins){ // feet stay: the hip can only go as far as the legs reach
+   const max=S.body.thigh+S.body.shin-0.5;
+   const ok=h=>{P.hip=h;const A=anchors();return Math.hypot(feet[0][0]-A.hipL[0],feet[0][1]-A.hipL[1])<=max&&Math.hypot(feet[1][0]-A.hipR[0],feet[1][1]-A.hipR[1])<=max};
+   if(!ok(nh)){let lo=0,hi=1;for(let i=0;i<20;i++){const m=(lo+hi)/2;ok([old[0]+(nh[0]-old[0])*m,old[1]+(nh[1]-old[1])*m])?lo=m:hi=m}
+    nh=[old[0]+(nh[0]-old[0])*lo,old[1]+(nh[1]-old[1])*lo]}
+   P.hip=nh;const A=anchors();setTarget('fL',feet[0],A);setTarget('fR',feet[1],A);
+  }else{ // whole body moves (jumps); feet can't sink below the ground line
+   const lowest=Math.max(feet[0][1],feet[1][1]);
+   if(lowest+(nh[1]-old[1])>GROUND-SHOE)nh[1]=old[1]+(GROUND-SHOE-lowest);
+   P.hip=nh;
+  }
+ }else if(drag.h==='rot'){
+  setRotation(Math.atan2(p[0]-P.hip[0],-(p[1]-P.hip[1]))*180/Math.PI-TORSOS[P.type].rot);
+ }else if(drag.h==='head'){
+  const A=anchors().neck;S.head.x=Math.round(p[0]-A[0]);S.head.y=Math.round(p[1]-(A[1]-S.head.size*.42));
+  $('hX').value=S.head.x;$('hY').value=S.head.y;
+ }else if(drag.h[0]==='j')moveJoint(drag.h.slice(1),t);
+ else setTarget(drag.h,drag.h[0]==='f'?clampFoot(t):t);
+ render();
+});
+const end=()=>{drag=null};svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+
+// ---- UI
+YAWS.forEach(([n,v])=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>{setYaw(v);render()};$('yawBtns').appendChild(b)});
+$('yaw').oninput=e=>{setYaw(+e.target.value);render()};
+TORSOS.forEach((t,i)=>{const b=document.createElement('button');b.textContent=t.name;b.onclick=()=>{keepFeet(()=>{S.pose.type=i});syncTorso();render()};$('torsoBtns').appendChild(b)});
+function syncTorso(){[...$('torsoBtns').children].forEach((b,i)=>b.classList.toggle('on',i===S.pose.type))}
+$('rotFine').oninput=e=>{setRotation(+e.target.value);render()};
+$('pin').onclick=e=>{S.pins=!S.pins;e.target.classList.toggle('on',S.pins);e.target.textContent='Ghim chân: '+(S.pins?'BẬT':'TẮT');render()};
+$('hnd').onclick=e=>{S.showHandles=!S.showHandles;e.target.classList.toggle('on',S.showHandles);render()};
+$('reset').onclick=()=>{S.pose=DEFAULT_POSE();syncAll();render()};
+$('mirror').onclick=()=>{ // mirror the 3D pose: swap sides, flip the sideways axis, turn the other way
+ const P=S.pose,l=P.limbs,m=o=>[-o[0],o[1],o[2]];
+ P.limbs={hL:m(l.hR),hR:m(l.hL),fL:m(l.fR),fR:m(l.fL)};
+ const q=P.poles;P.poles={hL:m(q.hR),hR:m(q.hL),fL:m(q.fR),fR:m(q.fL)};
+ P.type=[0,1,3,2][P.type];P.rotFine=-P.rotFine;P.yaw=wrap(-P.yaw);
+ S.head.yaw=wrap(-(S.head.yaw||0));S.head.rot=wrap(-S.head.rot);syncAll();render();
+};
+// body proportion sliders (built from BODY_UI)
+BODY_UI.forEach(([title,items])=>{
+ const box=$('bodySliders'),h=document.createElement('div');h.className='sub';h.textContent=title;box.appendChild(h);
+ items.forEach(([label,key,min,max])=>{
+  const row=document.createElement('div');row.className='row';
+  row.innerHTML=`<label>${label} <b id="bv_${key}"></b></label><input type="range" id="b_${key}" min="${min}" max="${max}">`;
+  box.appendChild(row);
+  $('b_'+key).oninput=e=>{if(key==='gap'&&S.bodyLocked){e.target.value=S.body.gap;return}setBody(key,+e.target.value);$('bv_'+key).textContent=S.body[key];render()};
+ });
+});
+// Changing a bone length scales the limb's pose with it (a straight leg stays straight),
+// and the body is lifted / lowered so feet that stood on the ground keep standing on it.
+function setBody(key,v){
+ const P=S.pose,b=S.body,arm=key==='upA'||key==='foreA',leg=key==='thigh'||key==='shin';
+ const onGround=worldFeet().map(f=>f[1]>=GROUND-SHOE-1);
+ const before=arm?b.upA+b.foreA:leg?b.thigh+b.shin:0;
+ b[key]=v;
+ if(arm||leg){
+  const r=(arm?b.upA+b.foreA:b.thigh+b.shin)/before;
+  (arm?['hL','hR']:['fL','fR']).forEach(k=>{P.limbs[k]=mul3(P.limbs[k],r)});
+ }
+ if(!S.pins&&onGround.some(Boolean)){ // keep the standing foot on the ground line
+  const f=worldFeet(),low=Math.max(...f.filter((_,i)=>onGround[i]).map(p=>p[1]));
+  P.hip[1]+=(GROUND-SHOE)-low;
+ }
+}
+S.bodyLocked=true;
+function syncLock(){
+ const b=$('bodyLock');b.classList.toggle('on',S.bodyLocked);
+ b.textContent=S.bodyLocked?'🔒 Thân trên + dưới DÍNH LIỀN (bấm để mở khóa)':'🔓 ĐÃ MỞ KHÓA: kéo "Thân dưới" để tách (bấm để khóa lại)';
+ const g=$('b_gap');if(g)g.disabled=S.bodyLocked;
+}
+$('bodyLock').onclick=()=>{S.bodyLocked=!S.bodyLocked;syncLock();scheduleSave()};
+function syncBody(){syncLock();for(const k in S.body){const i=$('b_'+k);if(i){i.value=S.body[k];$('bv_'+k).textContent=S.body[k]}}}
+$('bodyReset').onclick=()=>{S.body=Object.assign({},DEF_BODY);syncBody();render()};
+function bind(id,fn){$(id).oninput=e=>{fn(e.target.value);render()}}
+bind('pName',v=>S.look.name=v.toUpperCase());bind('pNum',v=>S.look.num=v);
+bind('cShirt',v=>S.look.shirt=v);bind('cNum',v=>S.look.numc=v);bind('cShorts',v=>S.look.shorts=v);
+bind('cSocks',v=>S.look.socks=v);bind('cShoes',v=>S.look.shoes=v);bind('cSkin',v=>S.look.skin=v);bind('cHair',v=>S.look.hair=v);
+bind('hSize',v=>S.head.size=+v);bind('hSink',v=>{S.head.sink=+v;$('hSinkVal').textContent=v});bind('hRot',v=>S.head.rot=+v);bind('hYaw',v=>S.head.yaw=+v);
+$('headReset').onclick=()=>{S.head.yaw=0;S.head.rot=0;$('hYaw').value=0;$('hRot').value=0;render()};bind('hX',v=>S.head.x=+v);bind('hY',v=>S.head.y=+v);
+[['headFront','front'],['headSide','side'],['headBack','back']].forEach(([id,k])=>{
+ $(id).onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=async()=>{S.head[k]=r.result;await measureNeck(k,r.result);render()};r.readAsDataURL(f)};
+});
+$('clearHead').onclick=()=>{S.head.front=S.head.q45=S.head.side=S.head.q135=S.head.back=null;['headFront','headSide','headBack'].forEach(i=>$(i).value='');render()};
+
+const clonePose=p=>{const d=DEFAULT_POSE(),c=JSON.parse(JSON.stringify(p||{}));return Object.assign(d,c,{limbs:Object.assign(d.limbs,c.limbs||{}),poles:Object.assign(d.poles,c.poles||{})})};
+function renderLib(){
+ const box=$('poseList');box.innerHTML='';
+ S.library.forEach((p,i)=>{
+  const d=document.createElement('div'),b=document.createElement('button'),x=document.createElement('button');
+  b.textContent=p.name;b.onclick=()=>{S.pose=clonePose(p.pose);if('headYaw' in p){S.head.yaw=p.headYaw;S.head.rot=p.headRot}syncAll();render()};
+  x.textContent='✕';x.onclick=()=>{S.library.splice(i,1);renderLib()};
+  d.append(b,x);box.appendChild(d);
+ });
+}
+$('savePose').onclick=()=>{ // no prompt(): the name comes from the text box next to the button
+ const n=$('poseName').value.trim()||('Tư thế '+(S.library.length+1));
+ S.library.push({name:n,pose:JSON.parse(JSON.stringify(S.pose)),headYaw:S.head.yaw||0,headRot:S.head.rot});
+ $('poseName').value='';renderLib();
+};
+function syncAll(){
+ const P=S.pose,K=S.look,H=S.head;
+ $('rotFine').value=P.rotFine;$('yaw').value=P.yaw;syncTorso();syncBody();
+ $('pName').value=K.name;$('pNum').value=K.num;$('cShirt').value=K.shirt;$('cNum').value=K.numc;$('cShorts').value=K.shorts;
+ $('cSocks').value=K.socks;$('cShoes').value=K.shoes;$('cSkin').value=K.skin;$('cHair').value=K.hair;
+ $('hSize').value=H.size;$('hSink').value=H.sink??34;$('hSinkVal').textContent=H.sink??34;$('hRot').value=H.rot;$('hYaw').value=H.yaw||0;$('hX').value=H.x;$('hY').value=H.y;
+}
+
+$('exPng').onclick=()=>{
+ const c=svg.cloneNode(true);c.querySelector('#handles').remove();c.querySelector('#ground').remove();
+ const bb=fig.getBBox(),pad=20,vb=[bb.x-pad,bb.y-pad,bb.width+2*pad,bb.height+2*pad];
+ c.setAttribute('viewBox',vb.join(' '));c.setAttribute('width',vb[2]*3);c.setAttribute('height',vb[3]*3);c.removeAttribute('style');
+ const img=new Image();
+ img.onload=()=>{const cv=document.createElement('canvas');cv.width=vb[2]*3;cv.height=vb[3]*3;cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+  cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(S.look.name||'cau-thu')+'_'+S.look.num+'.png';a.click()},'image/png')};
+ img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(c));
+};
+$('exJson').onclick=()=>{const b=new Blob([JSON.stringify({v:4,pose:S.pose,look:S.look,body:S.body,head:S.head,library:S.library})],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='football-studio.json';a.click()};
+$('imJson').onclick=()=>$('jsonFile').click();
+$('jsonFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);
+ S.pose=clonePose(d.pose);Object.assign(S.look,d.look);S.body=Object.assign({},DEF_BODY,d.body||{});
+ if(d.head){if(d.head.src&&!d.head.front)d.head.front=d.head.src;delete d.head.src;Object.assign(S.head,d.head)}
+ S.library=d.library||[];syncAll();renderLib();render()}catch(err){$('imJson').textContent='JSON lỗi, chọn lại';setTimeout(()=>$('imJson').textContent='Nạp JSON',2500)}};r.readAsText(f)};
+
+// ---- heads kept outside this file: data/heads/<ten>_front.png, _side.png, _back.png
+// When served over http, the heads of the player named in the "Tên" box load by themselves.
+// Measure where the neck is inside a head image: the bottom-most opaque row and the centre of the opaque
+// span just above it. Stored as fractions of the image, so any new player's art is aligned automatically.
+S.headMeta=S.headMeta||{};
+function measureNeck(key,src){
+ return new Promise(res=>{const im=new Image();im.onload=()=>{
+  const N=256,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d');x.drawImage(im,0,0,N,N);
+  const d=x.getImageData(0,0,N,N).data,op=(px,py)=>d[(py*N+px)*4+3]>40;
+  let by=-1;for(let y=N-1;y>=0&&by<0;y--)for(let xx=0;xx<N;xx++)if(op(xx,y)){by=y;break}
+  if(by<0){S.headMeta[key]={nx:.5,by:.97};return res()}
+  const ys=Math.max(0,by-Math.round(N*.04));let lo=N,hi=0;for(let xx=0;xx<N;xx++)if(op(xx,ys)){lo=Math.min(lo,xx);hi=Math.max(hi,xx)}
+  // skin colour of the neck as drawn in this image (average of a few pixels at the neck centre)
+  const cxp=Math.round((lo+hi)/2),py=Math.max(0,by-Math.round(N*.07));let r=0,g=0,b=0,n=0;
+  for(let dx=-3;dx<=3;dx++)for(let dy=-2;dy<=2;dy++){const i=((py+dy)*N+(cxp+dx))*4;if(d[i+3]>200){r+=d[i];g+=d[i+1];b+=d[i+2];n++}}
+  const skin=n?`rgb(${Math.round(r/n)},${Math.round(g/n)},${Math.round(b/n)})`:null;
+  S.headMeta[key]={nx:((lo+hi)/2+.5)/N,by:(by+1)/N,nw:(hi-lo+1)/N,skin};res()};im.onerror=()=>res();im.src=src})
+}
+const slug=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/[^a-z0-9]+/g,'');
+const toData=url=>fetch(url).then(r=>{if(!r.ok)throw 0;return r.blob()}).then(b=>new Promise(res=>{const f=new FileReader();f.onload=()=>res(f.result);f.readAsDataURL(b)}));
+async function autoHeads(){
+ const n=slug(S.look.name);if(!n)return;
+ let got=0;
+ for(const [k,f] of [['front','front'],['q45','q45'],['side','side'],['q135','q135'],['back','back']]){
+  try{S.head[k]=await toData(`data/heads/${n}_${f}.png`);await measureNeck(k,S.head[k]);got++}catch(e){}
+ }
+ $('headStatus').textContent=got?`Đã nạp ${got}/5 ảnh đầu của "${S.look.name}" (0°, 45°, 90°, 135°, 180°) từ data/heads/`:`Chưa có ảnh trong data/heads/ cho "${S.look.name}" (tên file: ${n}_front.png, ${n}_q45.png, ${n}_side.png, ${n}_q135.png, ${n}_back.png)`;
+ if(got)render();
+}
+let headTimer;$('pName').addEventListener('input',()=>{clearTimeout(headTimer);headTimer=setTimeout(autoHeads,500)});
+$('headLoad').onclick=autoHeads;
+// ======================= SAVE / RESTORE (settings are never lost on reload) =======================
+// Everything you tune (body proportions, colours, head placement, saved poses, keyframes) is stored in this
+// browser automatically. On a first visit the character file data/characters/haaland.json is used.
+// Add ?nosave to the address to run without touching the saved state (used for testing).
+const NOSAVE=location.search.includes('nosave'),SAVEKEY='fs_state_v2';
+function stateToSave(){return{v:2,body:S.body,look:S.look,head:{size:S.head.size,sink:S.head.sink,rot:S.head.rot,yaw:S.head.yaw,x:S.head.x,y:S.head.y},library:S.library,pose:S.pose,keys:S.keys,dur:S.dur,idle:S.idle,loop:S.loop,bodyLocked:S.bodyLocked}}
+let saveTimer;function scheduleSave(){if(NOSAVE)return;clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(SAVEKEY,JSON.stringify(stateToSave()))}catch(e){}},250)}
+function applyState(d){
+ if(d.body)S.body=Object.assign({},DEF_BODY,d.body);
+ if(d.look)Object.assign(S.look,d.look);
+ if(d.head)Object.assign(S.head,d.head);
+ if(d.library)S.library=d.library;
+ if(d.pose)S.pose=clonePose(d.pose);
+ if(d.keys)S.keys=d.keys;if(d.dur)S.dur=d.dur;
+ S.idle=!!d.idle;S.loop=d.loop!==false;S.bodyLocked=d.bodyLocked!==false;
+}
+{const _r=render;render=function(){_r.apply(this,arguments);scheduleSave()}}
+
+// ======================= KEYFRAME ANIMATION =======================
+// A key = the whole pose at a moment in time. Between two keys every number (hip, limbs, joint directions,
+// turn, flip, head turn) is blended with easing; limbs go through IK so bones keep their length.
+S.keys=S.keys||[];S.dur=S.dur||3;S.t=0;S.playing=false;S.idle=false;S.loop=true;
+const ease=u=>u*u*(3-2*u),mix=(a,b,u)=>a+(b-a)*u,mix3=(a,b,u)=>[mix(a[0],b[0],u),mix(a[1],b[1],u),mix(a[2],b[2],u)];
+const angMix=(a,b,u)=>a+wrap(b-a)*u;
+function takeKey(t){const P=S.pose;return{t,hip:P.hip.slice(),type:P.type,rotFine:P.rotFine,yaw:P.yaw,limbs:JSON.parse(JSON.stringify(P.limbs)),poles:JSON.parse(JSON.stringify(P.poles)),hyaw:S.head.yaw||0,hrot:S.head.rot||0}}
+function poseAt(t){
+ const ks=[...S.keys].sort((a,b)=>a.t-b.t);if(!ks.length)return null;
+ if(t<=ks[0].t)return ks[0];if(t>=ks[ks.length-1].t)return ks[ks.length-1];
+ let i=0;while(ks[i+1].t<t)i++;const A=ks[i],B=ks[i+1],u=ease((t-A.t)/(B.t-A.t||1));
+ const L={},Q={};for(const k of ['hL','hR','fL','fR']){L[k]=mix3(A.limbs[k],B.limbs[k],u);Q[k]=mix3(A.poles[k],B.poles[k],u)}
+ return{t,hip:[mix(A.hip[0],B.hip[0],u),mix(A.hip[1],B.hip[1],u)],type:u<.5?A.type:B.type,rotFine:angMix(A.rotFine,B.rotFine,u),yaw:angMix(A.yaw,B.yaw,u),limbs:L,poles:Q,hyaw:angMix(A.hyaw,B.hyaw,u),hrot:angMix(A.hrot,B.hrot,u)};
+}
+function applyKey(k,t){
+ const P=S.pose;P.hip=k.hip.slice();P.type=k.type;P.rotFine=k.rotFine;P.yaw=k.yaw;
+ P.limbs=JSON.parse(JSON.stringify(k.limbs));P.poles=JSON.parse(JSON.stringify(k.poles));
+ S.head.yaw=k.hyaw;S.head.rot=k.hrot;
+ if(S.idle&&S.playing){ // small constant life: breathing bob, tiny head sway
+  const s=Math.sin(t*2*Math.PI*0.8);P.hip[1]+=s*2.2;S.head.rot=k.hrot+Math.sin(t*2*Math.PI*0.5)*1.6;
+ }
+}
+function setTime(t,sync){
+ S.t=Math.max(0,Math.min(S.dur,t));$('tSlider').value=S.t;$('tVal').textContent=S.t.toFixed(2)+'s';
+ const k=poseAt(S.t);if(k){applyKey(k,S.t);if(sync)syncAll()}
+ render();
+}
+function renderKeys(){
+ const box=$('keyList');box.innerHTML='';
+ [...S.keys].sort((a,b)=>a.t-b.t).forEach(k=>{
+  const b=document.createElement('button');b.textContent=k.t.toFixed(2)+'s';b.title='Nhảy tới key này';
+  b.onclick=()=>{S.playing=false;$('tPlay').textContent='▶ Phát';setTime(k.t,true)};
+  const x=document.createElement('button');x.textContent='✕';x.title='Xóa key';x.onclick=()=>{S.keys=S.keys.filter(z=>z!==k);renderKeys();scheduleSave()};
+  const d=document.createElement('div');d.append(b,x);box.appendChild(d);
+ });
+}
+let rafId=0,lastTs=0;
+function tick(ts){
+ if(!S.playing)return;const dt=lastTs?(ts-lastTs)/1000:0;lastTs=ts;
+ let t=S.t+dt;if(t>S.dur){if(S.loop)t=t%S.dur;else{t=S.dur;S.playing=false;$('tPlay').textContent='▶ Phát'}}
+ setTime(t,false);if(S.playing)rafId=requestAnimationFrame(tick);
+}
+$('tSlider').oninput=e=>{S.playing=false;$('tPlay').textContent='▶ Phát';setTime(+e.target.value,true)};
+$('tDur').oninput=e=>{S.dur=Math.max(.5,+e.target.value||3);$('tSlider').max=S.dur;scheduleSave()};
+$('tAdd').onclick=()=>{ // add a key at the current time (or replace the key already there)
+ S.keys=S.keys.filter(k=>Math.abs(k.t-S.t)>.03);S.keys.push(takeKey(+S.t.toFixed(2)));renderKeys();scheduleSave();
+};
+$('tPlay').onclick=e=>{
+ if(S.keys.length<1)return;S.playing=!S.playing;e.target.textContent=S.playing?'⏸ Dừng':'▶ Phát';
+ if(S.playing){if(S.t>=S.dur)S.t=0;lastTs=0;rafId=requestAnimationFrame(tick)}
+};
+$('tIdle').onclick=e=>{S.idle=!S.idle;e.target.classList.toggle('on',S.idle);scheduleSave()};
+$('tLoop').onclick=e=>{S.loop=!S.loop;e.target.classList.toggle('on',S.loop);scheduleSave()};
+
+// ---- start-up: saved state first, otherwise the character file, then the heads
+(async function init(){
+ let d=null;
+ if(!NOSAVE){try{d=JSON.parse(localStorage.getItem(SAVEKEY)||'null')}catch(e){}}
+ if(!d&&location.protocol.startsWith('http')){try{d=await fetch('data/characters/haaland.json').then(r=>r.ok?r.json():null)}catch(e){}}
+ if(d)applyState(d);
+ $('tSlider').max=S.dur;$('tDur').value=S.dur;$('tIdle').classList.toggle('on',S.idle);$('tLoop').classList.toggle('on',S.loop);
+ syncAll();renderLib();renderKeys();render();
+ if(location.protocol.startsWith('http'))await autoHeads();
+})();
+window.__S=S;window.__render=render;window.__last=()=>last;
+})();
+</script></body></html>
