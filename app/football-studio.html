@@ -264,7 +264,10 @@ function ik3(a,t,l1,l2,pole){
 }
 function solve(k){
  const a=anchor3(LIMB[k]),[l1,l2]=LEN[k],pole=S.pose.poles[k]||POLE[k];
- let [j,e]=ik3(a,add3(a,S.pose.limbs[k]),l1,l2,pole);
+ // "Sau lưng" / "Trước ngực" keep the hand behind the back / in front of the chest at all times (also after dragging or loading old files)
+ let tgt=S.pose.limbs[k];const side=k[0]==='h'&&(S.pose.armSide||{})[k];
+ if(side==='back'||side==='front'){const B=S.body,d=Math.max(B.chest*B.depthK,B.waist*B.depthW)/100+B.hand*.9+4;tgt=[tgt[0],tgt[1],side==='back'?Math.min(tgt[2],-d):Math.max(tgt[2],d)]}
+ let [j,e]=ik3(a,add3(a,tgt),l1,l2,pole);
  if(k[0]==='f'){ // a foot never goes under the ground line
   const pe=project(e);
   if(pe[1]>GROUND-SHOE){[j,e]=ik3(a,add3(a,offsetForTarget(k,[pe[0],GROUND-SHOE])),l1,l2,pole)}
