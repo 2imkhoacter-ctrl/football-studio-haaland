@@ -1333,9 +1333,10 @@ svg.addEventListener('pointermove',ev=>{
   $('hX').value=S.head.x;$('hY').value=S.head.y;
  }else if(drag.h[0]==='j')moveJoint(drag.h.slice(1),t);
  else setTarget(drag.h,drag.h[0]==='f'?clampFoot(t):t);
- render();
+ if(!dragRAF)dragRAF=requestAnimationFrame(()=>{dragRAF=0;render()}); // tối đa 1 lần vẽ mỗi khung hình
 });
-const end=()=>{drag=null};svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+let dragRAF=0;
+const end=()=>{if(dragRAF){cancelAnimationFrame(dragRAF);dragRAF=0;if(drag)render()}drag=null};svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
 
 // ---- UI
 YAWS.forEach(([n,v])=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>{setYaw(v);render()};$('yawBtns').appendChild(b)});
@@ -1563,6 +1564,8 @@ function pitchBallPose(ball,scene){
  if(point[2]<.65)return null;
  return [...view.project(point),view.real?ball.size/100*view.figScale(point[2]):ball.size/100*view.distance/point[2],point[2]<=view.distance?'front':'back'];
 }
+var FS_DRAFT=false; // true trong lúc kéo thanh trượt: vẽ bản nhẹ cho mượt, thả tay là vẽ lại đầy đủ
+var fsNightCache={key:null,node:null};
 function drawNightStadium(parent,scene){
  const {yaw,focal,horizon,camera,project}=nightCamera(scene);
  const near=.65;
@@ -1600,9 +1603,13 @@ function drawNightStadium(parent,scene){
  const defs=svgn('defs',{},parent);
  const serial=(drawNightStadium.serial=(drawNightStadium.serial||0)+1);
  const blurId='nightCrowdBlur'+serial;
- const blur=svgn('filter',{id:blurId,filterUnits:'userSpaceOnUse',x:-4400,y:-4400,width:9400,height:9400},defs);
- svgn('feGaussianBlur',{stdDeviation:4.1},blur);
- const stands=svgn('g',{filter:'url(#'+blurId+')'},parent);
+ let stands;
+ if(FS_DRAFT)stands=svgn('g',{},parent);
+ else{
+  const blur=svgn('filter',{id:blurId,filterUnits:'userSpaceOnUse',x:-4400,y:-4400,width:9400,height:9400},defs);
+  svgn('feGaussianBlur',{stdDeviation:4.1},blur);
+  stands=svgn('g',{filter:'url(#'+blurId+')'},parent);
+ }
  const flashes=[];
  for(let i=0;i<40;i++){
   polygon([ring(i,0),ring(i+1,0),ring(i+1,56),ring(i,56)],'#5983ac',stands);
@@ -1610,7 +1617,7 @@ function drawNightStadium(parent,scene){
    const h=1.3+row*7.8;
    polygon([ring(i,h),ring(i+1,h),ring(i+1,h+6.6),ring(i,h+6.6)],
     ['#719bc7','#6c94c1','#729bc6'][row%3],stands);
-   for(let j=0;j<7;j++){
+   for(let j=0;j<(FS_DRAFT?0:7);j++){
     const a=i+(j+.15)/7,b=a+.093,v=h+.45+((i*17+j*13+row*19)%47)*.103;
     polygon([ring(a,v),ring(b,v),ring(b,v+.86),ring(a,v+.86)],
      ['#96b7d6','#87aad0','#a4bfd2','#7298c3'][((i*13+j*7+row*5)%19)%4],stands);
@@ -1636,7 +1643,7 @@ function drawNightStadium(parent,scene){
  const blades=[],flecks=[];
  let seed=51293;
  const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
- for(let i=0;i<11200;i++){
+ for(let i=0;i<(FS_DRAFT?0:11200);i++){
   // Keep each cluster rooted to the pitch as the camera moves.
   const gx=random()*88-44,gz=random()*128-64;
   const [a,,d]=camera([gx,0,gz]);
@@ -1685,7 +1692,16 @@ function drawBallFire(target,P,scene,px,py,scale){
 }
 function drawProps(target,sol,layer){
  const scene=S.props.scene;
- if(layer==='back'&&scene?.show&&scene.style==='night360')drawNightStadium(svgn('g',{'data-night-stadium':'',style:'pointer-events:none'},target),scene);
+ if(layer==='back'&&scene?.show&&scene.style==='night360'){
+  // khung xem trực tiếp: nếu cảnh/camera/giờ không đổi (vd chỉ kéo tay) thì dùng lại khán đài đã vẽ
+  const live=target.id==='fig',key=live?JSON.stringify([scene,S.pose.yaw,Number(S.t)||0,!!S.playing,FS_DRAFT]):null;
+  if(live&&fsNightCache.node&&fsNightCache.key===key)target.appendChild(fsNightCache.node);
+  else{
+   const g=svgn('g',{'data-night-stadium':'',style:'pointer-events:none'},target);
+   drawNightStadium(g,scene);
+   if(live){fsNightCache.key=key;fsNightCache.node=g}
+  }
+ }
  for(const id in S.props){const P=S.props[id],pitchLocked=id==='ball'&&P.attach==='pitch';if(!P.show||(!pitchLocked&&P.layer!==layer)||!PROP_DRAW[id]||(id==='scene'&&P.style==='night360'))continue;
   let px=P.x,py=P.y,scale=P.size/100;
   if(pitchLocked){
@@ -3125,6 +3141,13 @@ async function loadViniHeads(head){
   $('viniUndo').hidden=true;$('poseStatus').textContent='Đã khôi phục nhân vật trước khi thử preset.';
   syncAll();render();
  };
+// kéo thanh trượt (xoay, camera...): vẽ bản nhẹ, dừng tay 0,2 giây thì vẽ lại đầy đủ
+let draftTimer=0;
+document.addEventListener('input',e=>{
+ if(!e.target||e.target.type!=='range')return;
+ FS_DRAFT=true;clearTimeout(draftTimer);
+ draftTimer=setTimeout(()=>{FS_DRAFT=false;render()},200);
+},true);
 window.__S=S;window.__render=render;window.__last=()=>last;
 })();
 // ---- zoom / pan of the preview only (exports use the fixed full frame) ----
