@@ -35,7 +35,31 @@ input[type=file]{font-size:12px;max-width:100%}
 .poses div{display:flex;gap:4px}.poses div button:first-child{flex:1;text-align:left}
 .sub{color:var(--mute);font-size:12px;margin:8px 0 2px}
 @media(max-width:820px){.app{grid-template-columns:1fr;grid-template-rows:55dvh auto}.panel{border-left:0;border-top:1px solid var(--line)}}
-</style></head><body>
+/* ===== GIAO DIỆN KIỂU GAME TẠO NHÂN VẬT ===== */
+.app{grid-template-columns:minmax(0,1fr) 400px}
+.panel{padding:0;gap:0;background:linear-gradient(180deg,#1b2230,#141922)}
+#tabBar{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px;background:#10151c;border-bottom:1px solid var(--line);box-shadow:0 6px 14px #0008}
+#tabBar button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 6px;border-radius:12px;background:#1b2330;border:1px solid #2b3645;font-size:11px;font-weight:600;color:#aab6c3;transition:.15s}
+#tabBar button .ic{font-size:22px;line-height:1.1}
+#tabBar button:hover{transform:translateY(-1px);border-color:var(--acc);color:#fff}
+#tabBar button.on{background:linear-gradient(180deg,#0f6d7c,#0b4a57);border-color:#5eead4;color:#fff;box-shadow:0 0 12px #22d3ee66,inset 0 1px 0 #ffffff30}
+#tabBody{padding:12px;display:flex;flex-direction:column;gap:12px}
+.tabPane{display:none;flex-direction:column;gap:12px}.tabPane.show{display:flex}
+.panel .box{border-radius:14px;border:1px solid #2c3746;background:linear-gradient(180deg,#19202a,#151a22);padding:0;overflow:hidden;box-shadow:0 2px 8px #0005}
+.panel .box>h3{margin:0;padding:11px 12px;font-size:13px;color:#e6fbff;cursor:pointer;display:flex;align-items:center;gap:8px;background:linear-gradient(90deg,#16384a,#182230);border-bottom:1px solid #2c3746;user-select:none}
+.panel .box>h3::before{content:attr(data-ic);font-size:18px}
+.panel .box>h3::after{content:"▾";margin-left:auto;color:#7dd3e0;transition:.15s}
+.panel .box.shut>h3::after{transform:rotate(-90deg)}
+.panel .box.shut>h3{border-bottom:0}
+.panel .box>.boxIn{padding:10px 12px 12px}
+.panel .box.shut>.boxIn{display:none}
+.panel input[type=range]{accent-color:#22d3ee;height:18px}
+.panel button{border-radius:10px;transition:.12s}
+.panel button:active{transform:scale(.97)}
+.panel .grid4 button,.panel .grid3 button{padding:9px 4px;font-weight:600}
+.panel .row label{font-size:12.5px;color:#b4c0cc}
+.panel select{background:#10151a;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px}
+@media(max-width:820px){#tabBar{grid-template-columns:repeat(7,1fr);gap:3px;padding:6px}#tabBar button .lb{display:none}}</style></head><body>
 <div class="app">
  <div class="stage">
   <svg id="svg" viewBox="0 0 600 720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -2815,4 +2839,57 @@ window.__S=S;window.__render=render;window.__last=()=>last;
  let pan=null;svg.addEventListener('pointerdown',e=>{if(e.button===1||e.button===2){pan={x:e.clientX,y:e.clientY,vb:vb.slice()};svg.setPointerCapture(e.pointerId);e.preventDefault()}});
  svg.addEventListener('pointermove',e=>{if(!pan)return;const r=svg.getBoundingClientRect(),s=Math.min(r.width/pan.vb[2],r.height/pan.vb[3]);vb=[pan.vb[0]-(e.clientX-pan.x)/s,pan.vb[1]-(e.clientY-pan.y)/s,pan.vb[2],pan.vb[3]];apply()});
  svg.addEventListener('pointerup',()=>{pan=null});svg.addEventListener('contextmenu',e=>e.preventDefault());
-})();</script></body></html>
+})();</script><script>
+/* Gom các hộp công cụ thành thẻ (tab) kiểu game; không đổi id nào nên mọi chức năng giữ nguyên */
+(function(){
+ const panel=document.querySelector('.panel');if(!panel)return;
+ const boxes=[...panel.querySelectorAll(':scope > .box')];
+ const TABS=[
+  ['pose','🧍','Tư thế',[['QUAY NGƯỜI','🔄'],['THÂN (vẽ sẵn','🏋️'],['TƯ THẾ','🕺'],['TAY Ở TRƯỚC','✋'],['XOAY BÀN TAY','🦶']]],
+  ['char','👤','Cầu thủ',[['CẦU THỦ','⭐'],['THÂN HÌNH','📏']]],
+  ['head','🙂','Đầu & mặt',[['CHỈNH HÌNH ĐẦU','🎨'],['KHUÔN MẶT VECTOR','👀'],['ĐẦU (ảnh','🖼️']]],
+  ['kit','👕','Áo quần',[['IN TRÊN ÁO','🔢']]],
+  ['prop','⚽','Vật phẩm & nền',[['VẬT PHẨM','🏆'],['NỀN XEM TRƯỚC','🌤️']]],
+  ['anim','🎬','Hoạt hình',[['HOẠT HÌNH','🎞️']]],
+  ['save','💾','Xuất / Lưu',[['XUẤT / LƯU','📤']]]
+ ];
+ const bar=document.createElement('div');bar.id='tabBar';
+ const body=document.createElement('div');body.id='tabBody';
+ const panes={};
+ for(const [id,ic,name] of TABS){
+  const b=document.createElement('button');b.type='button';b.dataset.tab=id;b.innerHTML=`<span class="ic">${ic}</span><span class="lb">${name}</span>`;b.title=name;
+  bar.appendChild(b);
+  const p=document.createElement('div');p.className='tabPane';p.id='pane_'+id;body.appendChild(p);panes[id]=p;
+ }
+ const shutByDefault=['CHỈNH HÌNH ĐẦU','ĐẦU (ảnh','XOAY BÀN TAY','THÂN HÌNH','TAY Ở TRƯỚC'];
+ const left=[];
+ for(const box of boxes){
+  const h=box.querySelector(':scope > h3');if(!h){left.push(box);continue}
+  const title=h.textContent.trim();let placed=false;
+  for(const [id,,,items] of TABS){
+   const it=items.find(([k])=>title.startsWith(k));
+   if(it){
+    h.dataset.ic=it[1];
+    const inner=document.createElement('div');inner.className='boxIn';
+    while(h.nextSibling)inner.appendChild(h.nextSibling);
+    box.appendChild(inner);
+    h.onclick=()=>box.classList.toggle('shut');
+    if(shutByDefault.some(k=>title.startsWith(k)))box.classList.add('shut');
+    panes[id].appendChild(box);placed=true;break;
+   }
+  }
+  if(!placed)left.push(box);
+ }
+ for(const box of left)panes.save.appendChild(box);
+ panel.prepend(bar);bar.after(body);
+ function show(id){
+  for(const k in panes)panes[k].classList.toggle('show',k===id);
+  bar.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===id));
+  try{localStorage.setItem('fs_tab',id)}catch(e){}
+  panel.scrollTop=0;
+ }
+ bar.onclick=e=>{const b=e.target.closest('button');if(b)show(b.dataset.tab)};
+ let start='pose';try{start=localStorage.getItem('fs_tab')||'pose'}catch(e){}
+ if(!panes[start])start='pose';show(start);
+})();
+</script></body></html>
