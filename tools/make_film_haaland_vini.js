@@ -40,9 +40,10 @@ const hero = {
   pos: posList,
   head: [[0, -90], [TURN.a, -90], [TURN.b, 90], [4.7, 90], [4.95, 12], [15, 12]],
   runSpeed: 2.8, blink: 0.4, seed: 1,
-  ges: [], faces: [{ t0: 0, t1: 15, e: 'think' }], jumps: [],
+  ges: [], faces: [{ t0: 0, t1: 15, e: 'neutral' }], jumps: [],
   mod: (t, key, c) => {
     handsBehind(t, key, c);
+    Object.assign(key.face, { browKind: 'angry', browThick: 150, mouthKind: 'sad', mouthOpen: 0, mouthScale: 110 });   // mặt TỨC GIẬN: mày dữ dày + môi mếu
     const footX = H.body.hipW * 0.39, k = c.kl;
     // 1) bước chân CUỐI cùng vẫn là bước đi bình thường (cùng độ cao nhấc chân như các bước trước), chỉ CHẬM lại đúng lúc chân đang ở điểm giơ lên, rồi hạ xuống nhanh
     for (const tS of STOP) {
@@ -73,7 +74,7 @@ const hero = {
     // 4) NHÌN LÊN dứt khoát ngay trước khi cắt
     const up = ease(t, 5.1, 5.22);
     lookY = mix(lookY, -100, up); lid = mix(lid, 0, up); hrot = mix(hrot, -9, up);
-    if (up > 0.5) key.face.browKind = 'surprised';
+    if (up > 0.5) { key.face.mouthKind = 'teeth'; key.face.mouthOpen = 30; key.face.browThick = 175; }   // nhìn lên: nghiến răng
     key.face.lookY = r2(lookY); if (!key.face.lidL) { key.face.lidL = r2(lid); key.face.lidR = r2(lid); }
     key.hrot = r2(key.hrot + hrot);
     key.rotFine = r2(key.rotFine - 4 * up);
@@ -130,6 +131,7 @@ const k0 = film.keys[0];
 film.pose = { type: 0, rotFine: 0, yaw: k0.yaw, hip: k0.hip, limbs: k0.limbs, poles: k0.poles, ends: k0.ends, armSide: { hL: 'auto', hR: 'auto' } };
 film.props = Object.assign({}, film.props || {}, k0.props);
 film.face = Object.assign({}, H.face, { on: true });
+film.look = Object.assign({}, film.look, { hair: '#8a6420' });   // lông mày Haaland lấy màu tóc: đậm hơn để thấy rõ khi nhìn nghiêng
 film.cast = [{ meta: { wx: toSceneX(VP[0]), wy: toSceneY(VP[1]), wh: 0 }, pose: JSON.parse(JSON.stringify(V.pose)), body: V.body, look: Object.assign({}, V.look, { hair: '#1b1716' }), head: V.head, decals: V.decals, face: V.face, keys: cleanKeys(viniKeys) }];
 const out = path.resolve(process.argv[2] || path.join(root, 'animations', 'phim-haaland-vini.json'));
 fs.writeFileSync(out, JSON.stringify(film));
