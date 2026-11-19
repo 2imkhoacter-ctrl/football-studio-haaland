@@ -2284,7 +2284,12 @@ function drawCast(target,phase){
   }
  }finally{inCast=false;OW=OW0}
 }
-function render(target=fig,preview=true){renderOne(target,preview);drawCast(target,'front')}
+function render(target=fig,preview=true){
+ // Sân đêm 360°: người đang chỉnh luôn đứng đúng tâm xoay (hông ở giữa khung) - muốn dời thì đổi tọa độ sân,
+ // nếu không khi xoay camera chân sẽ trượt khỏi điểm đã chỉ định.
+ if(nightScene()&&S.pose&&S.pose.hip)S.pose.hip[0]=300;
+ renderOne(target,preview);drawCast(target,'front');
+}
 const EMPTY_HEAD=()=>({expression:'neutral',expressions:{},front:null,q45:null,side:null,q135:null,back:null,size:200,sink:34,rot:0,yaw:0,x:0,y:0});
 function syncCast(){
  const box=$('castList');if(!box)return;box.innerHTML='';
