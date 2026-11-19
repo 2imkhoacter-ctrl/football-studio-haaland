@@ -1,0 +1,10 @@
+{
+  "name": "football-studio-remotion-poc",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Thu nghiem ghep clip nhan vat (xuat tu Football Studio) vao Remotion. node_modules la junction tro sang POC_01 (chi doc, khong sua).",
+  "scripts": {
+    "studio": "remotion studio src/index.jsx",
+    "render": "remotion render src/index.jsx FootballPOC out/poc.mp4"
+  }
+}
