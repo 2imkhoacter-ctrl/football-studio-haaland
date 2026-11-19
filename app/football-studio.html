@@ -2192,11 +2192,11 @@ function siuGeom(meta,ix,iy,size,view){
  const anchor=meta.mouthAnchor||[(one?e0.cx:(e0.cx+e1.cx)/2)+shift,((e0.cy+e1.cy)/2)+(one?.9:1.05)*sep];
  const mx=ix+anchor[0]*size+F.mouthDx/100*sep*size*.5,my=iy+anchor[1]*size+F.mouthDy/100*sep*size*.5;
  const W=sep*size*(one?.33:(view==='front'?.95:.78))*F.mouthScale/100;
- return {mx,my,W,one,Lp:(one?.9:.62)*W};
+ return {mx,my,W,one,Lp:(one?1.1:.95)*W};
 }
 function siuEdge(meta,iy,size,y){const r=Math.max(0,Math.min(meta.edgeR.length-1,Math.floor((y-iy)/size*meta.edgeR.length)));return meta.edgeR[r]}
 function siuWarp(ig,meta,href,ix,iy,size,view){
- const G=siuGeom(meta,ix,iy,size,view),x0=G.mx-.3*G.W,yc=G.my+.05*G.W,hb=1.0*G.W,wIn=ix+size-x0;
+ const G=siuGeom(meta,ix,iy,size,view),x0=G.mx-.3*G.W,yc=G.my+.05*G.W,hb=1.15*G.W,wIn=ix+size-x0;
  if(!(wIn>4)||!(G.W>2))return;
  const uid=(siuWarp.n=(siuWarp.n||0)+1),defs=svgn('defs',{},ig),img=svgn('image',{id:'siuHead'+uid,x:ix,y:iy,width:size,height:size,preserveAspectRatio:'xMidYMid meet'},defs);
  img.setAttribute('href',href);img.setAttributeNS('http://www.w3.org/1999/xlink','href',href);

@@ -14,7 +14,8 @@ const H = R('data/characters/haaland-final.json'), V = R('data/characters/vini-f
 const FPS = 24, CUT = 5.95, DUR = 9.15, N = Math.round(DUR * FPS), o = { FPS, N };
 const THETA_A = process.env.VIEW_THETA != null ? +process.env.VIEW_THETA : 0;   // chỉ để thử góc (xem tay sau lưng)
 
-const VINI_FACE = process.env.VINI_FACE != null ? +process.env.VINI_FACE : 225;   // 180 = nhìn thẳng vào máy; 135/225 = nghiêng 3/4 (225: mõm chỉa sang trái)
+const VINI_FACE = process.env.VINI_FACE != null ? +process.env.VINI_FACE : 180;   // thân nhìn thẳng vào máy (tay giang cân đối)
+const VINI_HYAW = process.env.VINI_HYAW != null ? +process.env.VINI_HYAW : -45;     // chỉ XOAY ĐẦU nghiêng để thấy môi chu nhô ra (dương/âm = hướng quay)   // 180 = nhìn thẳng vào máy; 135/225 = nghiêng 3/4 (225: mõm chỉa sang trái)
 const HP = [0, +(process.env.HP_Z || 46.2)], VP = [0, 10];     // Haaland đứng gần khung thành (z=52.5) để khung thành đủ lớn so với sân             // chỗ đứng trên sân (mét). Hai người cách xa nhau để cảnh nào cũng không thấy người kia.
 const ease = (t, a, b) => S(clamp((t - a) / (b - a), 0, 1));
 const pulse = (t, t0, d) => (t < t0 || t > t0 + d) ? 0 : Math.pow(1 - (t - t0) / d, 2);
@@ -99,7 +100,7 @@ const vini = {
       const a = down[s].map((v, j) => mix(v, open[s][j], wOpen));
       key.limbs[s] = a.map((v, j) => mix(v, pump[s][j], wPump));
     }
-    key.hyaw = 0;
+    key.hyaw = r2(VINI_HYAW * ease(t, T_LAND - 0.05, T_LAND + 0.12));
     if (t >= T_LAND) {
       key.face.lidL = 18; key.face.lidR = 18; key.face.browKind = 'angry'; key.face.mouthKind = 'siu';   // mặt SIUUU: mày dữ, mắt nheo, môi CHU ra
       key.face.mouthOpen = r2(t > T_PUMP ? 80 : 50); key.face.lookY = r2(-30 * wPump);
@@ -114,7 +115,7 @@ const shots = [
   [0, CUT, t => ({ cx: 0.85 * posX(t), cz: HP[1], theta: THETA_A, size: 80, tilt: 8, waist: 330, dof: 0 })],
   [CUT, DUR + 1, t => ({ cx: VP[0], cz: VP[1], theta: 180, size: 72, tilt: 8, waist: 330, dof: 0 })],
 ];
-const TILT_UP = { a: 5.3, b: 5.75, ty: +(process.env.TILT_TY || 900) };      // camera NGẨNG LÊN trời theo mắt Haaland (dịch khung dọc)
+const TILT_UP = { a: 5.3, b: 5.75, ty: +(process.env.TILT_TY || 780) };      // camera NGẨNG LÊN trời theo mắt Haaland (dịch khung dọc)
 const camAt = t => { const s = shots.find(x => t >= x[0] && t < x[1]) || shots[shots.length - 1], c = s[2](t), kz = 100 / c.size, up = t < CUT ? ease(t, TILT_UP.a, TILT_UP.b) : 0; return Object.assign({}, c, { ty: c.waist - (645 - 273 * kz) + TILT_UP.ty * up }); };
 
 const heroKeys = buildActor(hero, H.body, H.face, true, o), viniKeys = buildActor(vini, V.body, Object.assign({}, V.face, { browColor: '#1b1716' }), true, o);   // lông mày đen như tóc Vini
@@ -129,7 +130,7 @@ const k0 = film.keys[0];
 film.pose = { type: 0, rotFine: 0, yaw: k0.yaw, hip: k0.hip, limbs: k0.limbs, poles: k0.poles, ends: k0.ends, armSide: { hL: 'auto', hR: 'auto' } };
 film.props = Object.assign({}, film.props || {}, k0.props);
 film.face = Object.assign({}, H.face, { on: true });
-film.cast = [{ meta: { wx: toSceneX(VP[0]), wy: toSceneY(VP[1]), wh: 0 }, pose: JSON.parse(JSON.stringify(V.pose)), body: V.body, look: V.look, head: V.head, decals: V.decals, face: V.face, keys: cleanKeys(viniKeys) }];
+film.cast = [{ meta: { wx: toSceneX(VP[0]), wy: toSceneY(VP[1]), wh: 0 }, pose: JSON.parse(JSON.stringify(V.pose)), body: V.body, look: Object.assign({}, V.look, { hair: '#1b1716' }), head: V.head, decals: V.decals, face: V.face, keys: cleanKeys(viniKeys) }];
 const out = path.resolve(process.argv[2] || path.join(root, 'animations', 'phim-haaland-vini.json'));
 fs.writeFileSync(out, JSON.stringify(film));
 console.log('ok', film.keys.length, 'khoa,', film.cast.length, 'dien vien phu,', (fs.statSync(out).size / 1e6).toFixed(1), 'MB ->', out);
