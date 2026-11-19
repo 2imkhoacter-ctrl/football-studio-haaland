@@ -2531,7 +2531,7 @@ function poseAt(t){
 }
 const CAM_FIELDS=['camX','camY','camYaw','dist','focal','camH','ty','size','tilt','free','cam3d','dof'];
 function mixProps(a,b,u,cut){const o={};for(const id in PROP_DEF){const x=Object.assign({},PROP_DEF[id],(a||{})[id]),y=Object.assign({},PROP_DEF[id],(b||{})[id]);o[id]={};for(const k in PROP_DEF[id])o[id][k]=(cut&&id==='scene'&&CAM_FIELDS.includes(k))?x[k]:(typeof PROP_DEF[id][k]==='number')?mix(x[k],y[k],u):(u<.5?x[k]:y[k]);if(x.attach!==y.attach&&(x.attach==='pitch'||y.attach==='pitch')){const anchor=u<.5?x:y;o[id].x=anchor.x;o[id].y=anchor.y}}return o}
-function mixFace(a,b,u){a=Object.assign({},FACE_DEF,a||{});b=Object.assign({},FACE_DEF,b||{});const o={};for(const k in FACE_DEF){o[k]=(typeof FACE_DEF[k]==='number')?mix(a[k],b[k],u):(u<.5?a[k]:b[k])}o.on=a.on;return o}
+function mixFace(a,b,u){a=Object.assign({},FACE_DEF,a||{});b=Object.assign({},FACE_DEF,b||{});const o={};for(const k in FACE_DEF){o[k]=(typeof FACE_DEF[k]==='number')?mix(a[k],b[k],u):(u<.5?a[k]:b[k])}o.on=a.on;const bc=u<.5?a.browColor:b.browColor;if(bc)o.browColor=bc;return o}   // giữ màu lông mày riêng (browColor) khi chạy keyframe; không có thì như cũ
 function applyKey(k,t,animate=S.playing){
  const P=S.pose;P.hip=k.hip.slice();P.type=k.type;P.rotFine=k.rotFine;P.yaw=k.yaw;
  P.limbs=JSON.parse(JSON.stringify(k.limbs));P.poles=JSON.parse(JSON.stringify(k.poles));

@@ -46,7 +46,7 @@ node tools/render_film.js <phim.json> <thu_muc_ra> [fps=24] [giay_toi_da|-] [khu
 ## 5. Bài học kỹ thuật (đã gặp lỗi, đừng lặp lại)
 - **Tay chắp sau lưng:** tay phải áp sát lưng dưới/mông (khuỷu gập ra sau, bàn tay sát mông), không để vênh ra khỏi người. Nhìn chính diện thì tay biến mất sau lưng.
 - **Khung thành gốc của sân 360° có đúng kích thước thật**, nhìn như đồ chơi vì **đặt người đứng quá xa nó**: camera làm vật càng xa càng nhỏ rất mạnh (cách 6 m thì khung thành chỉ còn khoảng 40% so với người). Đặt người cách vạch gôn khoảng 2,3 m cho đúng tỉ lệ; sát quá (~1 m) thì khung thành chiếm cả khung hình.
-- **Màu lông mày = màu tóc** (`look.hair`), tool **bỏ rơi `browColor` khi chạy keyframe** (`mixFace` chỉ nội suy các khóa trong `FACE_DEF`). Muốn đúng màu thì đặt `look.hair` trong JSON phim. Màu tóc phải **đo trên ảnh đầu thật** (Haaland ≈ `#f9d07a`), đừng tự pha màu. Vini: tóc đen `#1b1716` (hồ sơ có `look.hair` vàng nhạt `#e8d27a`, nên ghi đè trong script phim, không sửa `vini-final.json`).
+- **Màu lông mày = màu tóc** (`look.hair`) trừ khi có `browColor` riêng. Lỗi cũ: tool **bỏ rơi `browColor` khi chạy keyframe** (`mixFace` chỉ nội suy các khóa trong `FACE_DEF`); **đã sửa ngày 2026-11-19** (giữ `browColor`, không có thì như cũ, đã so ảnh các kiểu cũ không đổi). Script phim vẫn đặt `look.hair` cho chắc. Màu tóc phải **đo trên ảnh đầu thật** (Haaland ≈ `#f9d07a`), đừng tự pha màu. Vini: tóc đen `#1b1716` (hồ sơ có `look.hair` vàng nhạt `#e8d27a`, nên ghi đè trong script phim, không sửa `vini-final.json`).
 - **Camera ngẩng lên trời:** dịch `ty` của camera theo độ ngẩng (đã thử, giữ ngẩng vừa để còn thấy rìa khán đài và sao, đừng ngẩng hết thành màu xanh trơn).
 - **Cảnh Vini:** cỡ khung rộng hơn một chút và dịch người lên giữa khung, tay giang hẹp và chúc xuống để không bị cắt mép khung dọc.
 - **Mắt "hét":** biểu cảm có sẵn khép mắt nửa chừng làm nhân vật trông buồn ngủ; muốn hưng phấn thì mày dữ, mắt nheo hoặc mở to, tùy cảnh.
@@ -57,4 +57,4 @@ node tools/render_film.js <phim.json> <thu_muc_ra> [fps=24] [giay_toi_da|-] [khu
 - Chưa có **tiếng, nhạc, chữ "SIUUU"**; chưa có chữ/bong bóng thoại trong tool.
 - Kiểu miệng "siu" mới thử với **Vini** ở góc 3/4; chưa thử Haaland, chưa có ảnh đầu góc ngang hẳn của Vini.
 - Bản điện thoại (`app/football-studio-mobile.html`) chỉ thử bằng trình duyệt giả lập cảm ứng, **chưa thử Safari/điện thoại thật** của chủ dự án.
-- Các thay đổi trong `app/football-studio.html` (kiểu miệng "Chu môi siuuu", `siuWarp`) đang nằm trên nhánh `claude/lucid-keller-nkhyau`, **chưa gộp vào `main`**; chờ chủ dự án đồng ý.
+- Các thay đổi trong `app/football-studio.html` (kiểu miệng "Chu môi siuuu", `siuWarp`, sửa `mixFace` giữ `browColor`) đã được chủ dự án đồng ý và gộp vào `main` ngày 2026-11-19.

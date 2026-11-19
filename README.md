@@ -1,4 +1,4 @@
-﻿# Football Studio (xưởng dựng cầu thủ 2D)
+# Football Studio (xưởng dựng cầu thủ 2D)
 
 Kho riêng (private). Mô tả chi tiết kiến trúc và quy tắc: xem `CLAUDE.md`.
 
@@ -21,4 +21,10 @@ node node_modules/@remotion/cli/remotion-cli.js render src/index.jsx Goal2 out/g
 Cần tạo lại junction `node_modules` (Windows): `mklink /J node_modules D:\ChatTextStory_AI\POC_01\node_modules`.
 
 ## Dùng trên điện thoại
-Mở trực tiếp `app/football-studio.html` đã tải về (chưa kiểm tra cảm ứng/Safari, xem mục "Chưa làm" trong `CLAUDE.md`).
+Dùng bản riêng `app/football-studio-mobile.html` (bố cục dọc, vuốt hai ngón để zoom, vẽ nhẹ khi kéo thanh trượt; PNG/video xuất vẫn đầy đủ chi tiết). File này **sinh tự động** từ file gốc: `python3 tools/build_mobile.py` (file gốc không đổi). Mới thử bằng trình duyệt giả lập cảm ứng, chưa thử Safari/điện thoại thật.
+
+## Dựng phim ngắn và học từ video mẫu
+- `node tools/make_film_haaland_vini.js` rồi `node tools/render_film.js <phim.json> <thu_muc_ra>`: dựng và xuất phim nhiều nhân vật (MP4 1080×1920, không cần Remotion).
+- `python3 tools/phan_tich_video.py <video> <thu_muc_tam>`: đo nhịp (đứng im/chuyển động/cắt cảnh) và chọn khung để học kỹ thuật dựng.
+- Tài liệu: `docs/quy-trinh-dung-phim.md` (ngôn ngữ dựng, quy tắc nội dung, bài học kỹ thuật), `docs/quy-trinh-xem-video-mau.md` (cách xem video mẫu), `docs/hoc-ky-thuat-short-bat-chuoc-1.md`.
+- Video/khung hình của người khác **không** được đưa vào kho; chỉ ghi chú kỹ thuật bằng lời của mình.

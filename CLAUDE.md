@@ -53,34 +53,30 @@ S.props (PROP_DEF/PROP_DRAW/drawProps): mỗi món có show, layer (trước/sau
 ## Chạy và kiểm tra
 Chạy máy chủ tĩnh ở gốc kho, mở `app/football-studio.html?nosave`. Biến toàn cục để thử: `window.__S` (state), `window.__render`. Để kiểm tra bằng mắt cần trình duyệt; nếu môi trường không có thì nói rõ là **chưa xem bằng mắt**.
 
-## Chưa làm / chưa kiểm tra
-- Xuất chuỗi PNG/video cho clip dài (chưa thử; 2 phút ≈ 3600 khung, mỗi khung SVG ~1 MB). Kế hoạch: xuất PNG nền trong suốt từng cảnh 3–10 giây rồi ghép trong CapCut/Premiere.
-- Chỉ có 1 cầu thủ; chưa có bóng, đối thủ, sân, máy quay trong hoạt hình, âm thanh.
-- Chạy trên điện thoại (Safari, cảm ứng) chưa kiểm tra; zoom/di chuyển khung bằng chuột phải chưa có bản cảm ứng.
-- Cổ chân/bàn chân chưa được hoạt hình hóa; biểu cảm khuôn mặt (cần thêm ảnh GPT).
+## Chưa làm / chưa kiểm tra (cập nhật 2026-11-19)
+- Xuất clip dài: đã xuất được phim 9 giây (`tools/render_film.js`, ~10–15 phút cho ~220 khung trên máy chủ không card đồ họa); clip 2 phút (~3600 khung) chưa thử. Kế hoạch: dựng từng cảnh 3–10 giây rồi ghép trong CapCut/Premiere.
+- Đã có: bóng, cúp, khung thành, sân đêm 360°, nhiều diễn viên, camera thật, 2 cầu thủ (Haaland, Vini) và người nộm. **Chưa có:** âm thanh/nhạc, chữ và bong bóng thoại trong tool, nhiều cầu thủ có đầu riêng khác.
+- Chạy trên điện thoại: bản riêng `app/football-studio-mobile.html` (sinh bằng `tools/build_mobile.py`) mới thử bằng trình duyệt giả lập cảm ứng; **chưa thử Safari/điện thoại thật**.
+- Cổ chân/bàn chân chưa được hoạt hình hóa.
+- Biểu cảm khuôn mặt: đã có khuôn mặt vector (mắt/mày/miệng) và kiểu miệng "Chu môi siuuu"; chưa có chớp mắt tự động, chưa thử kiểu miệng siu với Haaland và với góc ngang hẳn.
 - Chỗ tay áo/vai ở một số góc nghiêng vẫn là điểm dễ lỗi; ống quần chân giơ cao đã sửa độ dày nhưng chỉ thử với một tư thế.
 
 ## Cách làm việc khi chủ dự án gửi ảnh lỗi
 Dựng lại đúng tư thế/góc quay (nạp `data/characters/haaland-final.json`, đặt yaw), phóng to vùng khoanh, tìm nguyên nhân gốc, sửa tổng quát, kiểm tra lại, báo ngắn: đã sửa gì, đã thử ở đâu, chưa thử gì.
 
+## Bản v25 (đưa vào kho 2026-11-19, do chủ dự án + GPT làm thêm)
+*(Phục dựng lại từ bản bị hỏng mã hóa; có thể sai chi tiết nhỏ ở các từ đoán, hỏi chủ dự án nếu cần.)*
+`app/football-studio.html` giờ là v25 (6,5 MB vì thêm ảnh); bản trước giữ ở `app/football-studio-v24-backup.html`. Thêm: ô **CHỈNH HÌNH ĐẦU** (biếm họa: mắt/tai khổng lồ, cằm, hàm, má, mũi, kiểu tóc, tự cân khung mắt), nắm/xòe tay, nhân vật **Vini Jr.** (đầu 4 góc, 2 dáng mẫu, có khôi phục), chỉnh độ dài tay áo/trang phục/gấu quần, **sân đêm 360°** (camera xoay, ngẩng, bóng khóa sân tự đổi lớp), các cảnh biên/khu HLV/góc cầu môn/nhìn từ trên. Khóa lưu vẫn `fs_state_v2`. Mới chỉ kiểm tra: mở được, không lỗi console; chưa thử từng tính năng mới bằng mắt.
 
+## Nhiều diễn viên (đối thủ, đồng đội) — thêm 2026-11-19
+Nhân vật đang chỉnh luôn ở trong `S`; các diễn viên khác ở `S.cast` (mỗi người: pose, body, look, head, headMeta, decals, face, keys). Chọn diễn viên = hoán đổi (`swapIn`). `render` = `renderOne` (người đang chỉnh) + `drawCast`: người có hàng cao hơn trên màn hình (xa) vẽ trước, gần vẽ sau; id SVG của người phụ được đổi hậu tố để khỏi trùng. Vật phẩm (bóng/cúp/nền) gắn vào người đang chỉnh. Lưu diễn viên trong nút "Lưu JSON" (`cast`); tự lưu trình duyệt chỉ giữ người đang chỉnh. Thẻ giao diện "Diễn viên". Menu chia thẻ (tab) kiểu game. Tính năng tách bộ phận khuôn mặt đã TẮT (`PARTS_ENABLED=false`, mã giữ lại). Vini chốt: `data/characters/vini-final.json`.
+Chưa thử: hoạt hình keyframe nhiều người trong giao diện, nạp lại JSON có cast, xuất video nhiều người bằng nút trong tool (phim nhiều người đã xuất được bằng `tools/render_film.js`).
 
+### Diễn viên trên sân đêm 360° (2026-11-19)
+Khi cảnh "sân đêm 360°" (`style night360`) bật: camera bám NGƯỜI ĐANG CHỈNH (`props.scene.x,y` = vị trí mặt trên sân, `rot` = hướng). Mỗi diễn viên phụ có `S.meta {wx,wy,wh}` và hoán đổi khi chọn: chọn ai thì camera nhảy sang người đó. Người phụ chiếu qua cùng camera: vị trí đứng im trên sân khi xoay camera, nhỏ dần theo độ xa, xếp trước/sau theo độ sâu thật, có bóng elip dưới chân; hướng hiển thị = `camDeg - wh`. Người phụ có keyframe thì vị trí lấy từ `props.scene.x/y/rot` trong key. Chưa giải: tay chân hai người chồng nhau vẫn theo từng lớp cả người (không đan xen).
 
-
-
-
-## B?n v25 (dua v�o kho 2026-11-19, do ch? d? �n + GPT l�m th�m)
-app/football-studio.html gi? l� v25 (6,5 MB, nh�ng th�m ?nh); b?n tru?c gi? ? app/football-studio-v24-backup.html. Th�m: � CH?NH H�NH �?U (bi?m h?a: m?t/tai kh?ng l?, c?m, h�m, m�, mui, ki?u t�c, t? can khung m?t), n?m/x�e tay, nh�n v?t Vini Jr. (d?u 4 g�c, 2 d�ng m?u, c� kh�i ph?c), ch?nh d? d�i tay �o/trang ph?c/g?u qu?n, s�n d�m 360� (camera xoay, ng?ng, b�ng kh�a s�n t? d?i l?p), c�c c?nh bi�n/khu HLV/g�c c?u m�n/nh�n t? tr�n. Kh�a luu v?n fs_state_v2. M?i ch? ki?m tra: m? du?c, kh�ng l?i console; chua th? t?ng t�nh nang m?i b?ng m?t.
-
-## Nhi?u di?n vi�n (d?i th?, d?ng d?i) � th�m 2026-11-19
-Nh�n v?t dang ch?nh lu�n ? trong S; c�c di?n vi�n kh�c ? S.cast (m?i ngu?i: pose, body, look, head, headMeta, decals, face, keys). Ch?n di?n vi�n = ho�n d?i (swapIn). render = renderOne (ngu?i dang ch?nh) + drawCast: ngu?i c� h�ng cao hon tr�n m�n h�nh (xa) v? tru?c, g?n v? sau; id SVG c?a ngu?i ph? du?c d?i h?u t? d? kh?i tr�ng. V?t ph?m (b�ng/c�p/n?n) g?n v�o ngu?i dang ch?nh. Luu di?n vi�n trong n�t Luu JSON (cast); t? luu tr�nh duy?t ch? gi? ngu?i dang ch?nh. Th? giao di?n "Di?n vi�n". Chua th?: ho?t h�nh keyframe nhi?u ngu?i, n?p l?i JSON c� cast, xu?t video nhi?u ngu?i. Menu chia th? (tab) ki?u game. T�nh nang t�ch b? ph?n khu�n m?t d� T?T (PARTS_ENABLED=false). Vini ch?t: data/characters/vini-final.json.
-
-### Di?n vi�n tr�n s�n d�m 360� (2026-11-19)
-Khi c?nh "s�n d�m 360�" (style night360) b?t: camera b�m NGU?I �ANG CH?NH (props.scene.x,y = v? tr� m�t tr�n s�n, rot = hu?ng). M?i di?n vi�n c� S.meta {wx,wy,wh} (ngu?i ph?) � ho�n d?i khi ch?n: ch?n ai th� camera nh?y sang ngu?i d�. Ngu?i ph? chi?u qua c�ng camera: v? tr� d?ng im tr�n s�n khi xoay camera, nh? d?n theo xa, x?p tru?c/sau theo d? s�u th?t, c� b�ng elip du?i ch�n; hu?ng hi?n th? = camDeg - wh. Ngu?i ph? c� keyframe th� v? tr� l?y t? props.scene.x/y/rot trong key. Chua gi?i: tay ch�n hai ngu?i ch?ng nhau v?n theo t?ng l?p c? ngu?i (kh�ng dan xen).
-
-## Camera th?t (2026-11-19)
-Th? "V?t ph?m & n?n" -> h?p CAMERA. B?t "D�ng camera th?t" (scene.cam3d=1, ch? ? s�n d�m 360�): camera d?c l?p (camX/camY di?m nh?m, camYaw, dist, focal, camH, ty, dof); m?i ngu?i co gi�n theo focal/(300*d? s�u) n�n kh?p t? l? v?i s�n. T?t = h�nh vi cu (m?c d?nh, kh�ng d?i h�nh d� ch?t). C� n�t Nh?m v�o ngu?i, 4 khung nhanh (to�n c?nh/to�n th�n/n?a ngu?i/c?n m?t), luu c?nh (S.shots, n?m trong JSON), c? "key k? ti?p l� C?T" (key.cutCam: c�c tru?ng camera nh?y th?ng thay v� n?i suy). Chua ki?m tra: d�ng trong phim d?ng s?n (make_goal_film2.js v?n d�ng ch? d? cu), c?t c?nh b?ng UI, xu?t video v?i camera th?t.
-
+## Camera thật (2026-11-19)
+Thẻ "Vật phẩm & nền" → hộp CAMERA. Bật "Dùng camera thật" (`scene.cam3d=1`, chỉ ở sân đêm 360°): camera độc lập (`camX/camY` điểm nhắm, `camYaw`, `dist`, `focal`, `camH`, `ty`, `dof`); mỗi người co giãn theo `focal/(300*độ sâu)` nên khớp tỉ lệ với sân. Tắt = hành vi cũ (mặc định, không đổi hình đã chốt). Có nút Nhắm vào người, 4 khung nhanh (toàn cảnh/toàn thân/nửa người/cận mặt), lưu cảnh (`S.shots`, nằm trong JSON), cờ "key kế tiếp là CẮT" (`key.cutCam`: các trường camera nhảy thẳng thay vì nội suy). Chưa kiểm tra: dùng camera thật trong phim dựng sẵn (các script phim `make_goal_film2.js`, `make_film_haaland_vini.js` dùng chế độ cũ `free=1`), cắt cảnh bằng UI, xuất video với camera thật.
 
 ## Cập nhật phiên điện thoại (2026-11-19): quy tắc làm việc, phim, học từ video mẫu
 **Đọc thêm:** `docs/quy-trinh-dung-phim.md` (ngôn ngữ dựng của chủ dự án, quy tắc nội dung, cách làm việc, cách dựng/xuất phim, bài học kỹ thuật), `docs/quy-trinh-xem-video-mau.md` (cách xem và phân tích video mẫu), `docs/hoc-ky-thuat-short-bat-chuoc-1.md`.
@@ -93,6 +89,6 @@ Th? "V?t ph?m & n?n" -> h?p CAMERA. B?t "D�ng camera th?t" (scene.cam3d=1, ch? ?
 
 **Công cụ phim:** `tools/make_film_haaland_vini.js` (sinh phim JSON) + `tools/render_film.js` (xuất MP4 1080×1920, không cần Remotion), `tools/export_video.js` (xuất hoạt hình một nhân vật), `tools/build_mobile.py`, `tools/phan_tich_video.py`.
 
-**Thay đổi trong `app/football-studio.html` trên nhánh `claude/lucid-keller-nkhyau` (CHƯA gộp vào `main`, chờ chủ dự án đồng ý):** thêm kiểu miệng **"Chu môi siuuu"** (`mouthKind:'siu'`, hàm `siuWarp`/`siuGeom`): nhìn nghiêng thì kéo chính đầu nhô ra, không viền, màu da, lỗ tối ở đầu mõm; nhìn thẳng là khối tròn phồng. Chỉ thêm một lựa chọn; các kiểu miệng cũ đã so ảnh không đổi. Lỗi nhỏ đã thấy: `mixFace` bỏ `browColor` khi chạy keyframe (xem `docs/quy-trinh-dung-phim.md` mục 5).
+**Thay đổi trong `app/football-studio.html` (chủ dự án đã đồng ý, gộp vào `main` ngày 2026-11-19):** thêm kiểu miệng **"Chu môi siuuu"** (`mouthKind:'siu'`, hàm `siuWarp`/`siuGeom`): nhìn nghiêng thì kéo chính đầu nhô ra, không viền, màu da, lỗ tối ở đầu mõm; nhìn thẳng là khối tròn phồng. Chỉ thêm một lựa chọn; các kiểu miệng cũ đã so ảnh không đổi. Cũng đã sửa lỗi nhỏ: `mixFace` từng bỏ `browColor` khi chạy keyframe (giờ giữ lại; không có `browColor` thì hành vi như cũ).
 
-**Lưu ý mã hóa:** các mục cuối của file này (từ "Bản v25" đến "Camera thật") bị hỏng chữ tiếng Việt (dấu `?` và ký tự lạ), có thể do lưu bằng PowerShell sai bảng mã. Chưa sửa; nên viết lại bằng UTF-8 sạch khi chủ dự án đồng ý.
+**Lưu ý mã hóa (đã xử lý 2026-11-19):** các mục "Bản v25", "Nhiều diễn viên", "Camera thật" từng bị hỏng chữ tiếng Việt (có thể do lưu bằng PowerShell sai bảng mã); đã phục dựng lại bằng UTF-8 sạch ở trên. Khi lưu file bằng PowerShell nhớ đặt UTF-8.
