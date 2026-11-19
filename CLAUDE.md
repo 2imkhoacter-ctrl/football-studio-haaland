@@ -80,3 +80,19 @@ Khi c?nh "s�n d�m 360�" (style night360) b?t: camera b�m NGU?I �ANG CH?NH (props
 
 ## Camera th?t (2026-11-19)
 Th? "V?t ph?m & n?n" -> h?p CAMERA. B?t "D�ng camera th?t" (scene.cam3d=1, ch? ? s�n d�m 360�): camera d?c l?p (camX/camY di?m nh?m, camYaw, dist, focal, camH, ty, dof); m?i ngu?i co gi�n theo focal/(300*d? s�u) n�n kh?p t? l? v?i s�n. T?t = h�nh vi cu (m?c d?nh, kh�ng d?i h�nh d� ch?t). C� n�t Nh?m v�o ngu?i, 4 khung nhanh (to�n c?nh/to�n th�n/n?a ngu?i/c?n m?t), luu c?nh (S.shots, n?m trong JSON), c? "key k? ti?p l� C?T" (key.cutCam: c�c tru?ng camera nh?y th?ng thay v� n?i suy). Chua ki?m tra: d�ng trong phim d?ng s?n (make_goal_film2.js v?n d�ng ch? d? cu), c?t c?nh b?ng UI, xu?t video v?i camera th?t.
+
+
+## Cập nhật phiên điện thoại (2026-11-19): quy tắc làm việc, phim, học từ video mẫu
+**Đọc thêm:** `docs/quy-trinh-dung-phim.md` (ngôn ngữ dựng của chủ dự án, quy tắc nội dung, cách làm việc, cách dựng/xuất phim, bài học kỹ thuật), `docs/quy-trinh-xem-video-mau.md` (cách xem và phân tích video mẫu), `docs/hoc-ky-thuat-short-bat-chuoc-1.md`.
+
+**Quy tắc làm việc thêm (chủ dự án nhắc):**
+- **Hỏi trước khi sửa file chính** (`app/football-studio.html`, các file `*-final.json`); đề xuất, chủ dự án gật rồi mới làm. Ưu tiên bản riêng/script sinh ra, không đụng file gốc.
+- Bản xem điện thoại: `python3 tools/build_mobile.py` sinh `app/football-studio-mobile.html` từ file gốc (bố cục dọc, cảm ứng, vẽ nhẹ khi kéo thanh trượt); xuất PNG/video vẫn đầy đủ chi tiết (đã so ảnh giống hệt). Xuất bằng file gốc trên máy tính.
+- Nội dung kênh: chỉ tin thật, hài trào phúng, hai phe cùng có đất, không bịa sự thật về người thật. Kịch câm đã nới cho việc học bong bóng thoại; chưa chốt bỏ hẳn, hỏi lại khi làm clip mới.
+- Học từ video mẫu: chủ dự án gửi file video (phiên cloud không vào được YouTube), Claude đo bằng `tools/phan_tich_video.py`, hỏi theo số ảnh, ghi ghi chú bằng lời của mình, **không lưu khung hình/video của người khác vào kho**.
+
+**Công cụ phim:** `tools/make_film_haaland_vini.js` (sinh phim JSON) + `tools/render_film.js` (xuất MP4 1080×1920, không cần Remotion), `tools/export_video.js` (xuất hoạt hình một nhân vật), `tools/build_mobile.py`, `tools/phan_tich_video.py`.
+
+**Thay đổi trong `app/football-studio.html` trên nhánh `claude/lucid-keller-nkhyau` (CHƯA gộp vào `main`, chờ chủ dự án đồng ý):** thêm kiểu miệng **"Chu môi siuuu"** (`mouthKind:'siu'`, hàm `siuWarp`/`siuGeom`): nhìn nghiêng thì kéo chính đầu nhô ra, không viền, màu da, lỗ tối ở đầu mõm; nhìn thẳng là khối tròn phồng. Chỉ thêm một lựa chọn; các kiểu miệng cũ đã so ảnh không đổi. Lỗi nhỏ đã thấy: `mixFace` bỏ `browColor` khi chạy keyframe (xem `docs/quy-trinh-dung-phim.md` mục 5).
+
+**Lưu ý mã hóa:** các mục cuối của file này (từ "Bản v25" đến "Camera thật") bị hỏng chữ tiếng Việt (dấu `?` và ký tự lạ), có thể do lưu bằng PowerShell sai bảng mã. Chưa sửa; nên viết lại bằng UTF-8 sạch khi chủ dự án đồng ý.

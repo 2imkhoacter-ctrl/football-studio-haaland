@@ -1,6 +1,7 @@
-# Học kỹ thuật từ một short bóng đá hoạt hình (NHÁP, chờ chủ dự án duyệt)
+# Học kỹ thuật từ một short bóng đá hoạt hình (đã được chủ dự án duyệt sơ bộ ngày 2026-11-19)
 
 Ghi chú **kỹ thuật dựng và nhịp**, viết bằng lời của mình, rút từ một short khổ dọc 64 giây (30 khung/giây). Không chứa khung hình, lời thoại hay kịch bản của ai. Mục đích: áp vào nhân vật và câu chuyện của riêng mình.
+Trạng thái: chủ dự án đã giải thích ý đồ các cảnh đầu (giây 0–13) và xác nhận hiểu đúng; các màn sau là mình tự quan sát, **chỗ nào sai thì sửa**. Quy trình xem video xem `docs/quy-trinh-xem-video-mau.md`; công cụ đo: `tools/phan_tich_video.py`.
 Cách đo: so khác biệt hình giữa các khung liên tiếp (đo máy, ước lượng) rồi đối chiếu bằng mắt ở các mốc chính. Chủ dự án giải thích ý đồ cho các cảnh đầu (giây 0–13); phần còn lại là mình tự quan sát, **cần chủ dự án sửa nếu sai**.
 
 ## 1. Cấu trúc: một khuôn lặp 5 màn
@@ -47,3 +48,17 @@ Video lặp cùng một khuôn nhiều lần: một nhân vật "ngôi sao" làm
 - Chuyển động toàn khung ~1 giây ở đầu màn 3 (giây 27,6–28,8) và đoạn ~3 giây chuyển động nhẹ ở cuối màn 3 (giây 35,8–39): mình chỉ đoán là vung đũa và gật đầu/ưỡn ngực nhẹ.
 - Cảnh cuối (giây 60,8–63,3, hơn 2 giây chuyển động rất nhẹ ở nhiều chỗ): chưa rõ là máy quay trượt chậm hay nhân vật thở/nhúc nhích.
 - Chưa nghe tiếng/nhạc nên chưa biết âm thanh bám nhịp cắt thế nào.
+
+## 8. Khuôn kịch bản và quy tắc nội dung (chủ dự án chốt)
+- Mỗi màn: ngôi sao làm một việc đỉnh dựa trên **chuyện có thật** → nhân vật chính nói "tôi cũng làm được" và làm theo → các màn sau lặp khuôn với ngôi sao khác.
+- **Màn chốt hai phe ngang hàng** ("kho báu" của mỗi bên đặt cạnh nhau, ví dụ Barça có Yamal, Real cũng có Güler), không phán ai hơn, để người xem tự chọn phe và tranh luận ở phần bình luận.
+- Chỉ làm **tin thật, chủ đề nóng**; hài nằm ở cách kể, không bịa sự thật. Chi tiết: `docs/quy-trinh-dung-phim.md` mục 2.
+- Biểu tượng CLB có thể thành nhân vật có mắt, tim để fan nhận ra phe mình mà không cần chữ.
+
+## 9. Điều chủ dự án đã sửa cho mình (các chỗ hiểu sai trước đó)
+- Đứng im hay chuyển động là **lựa chọn có chủ đích**, nhịp nhanh; chuyển động thì nhanh dứt khoát.
+- Hàng rào nhảy lên đứng im trên không, chỉ trượt cả khối; thủ môn một tư thế cuộn người rồi trượt ngang.
+- Máy quay lia ngang theo bóng, nhân vật trượt ra khỏi khung.
+- Messi quay đầu **sau khi** cầu thủ áo đỏ đã vào hẳn.
+- Gật đầu, ưỡn ngực rất nhẹ, khuôn mặt giữ một biểu cảm; Messi chỉ đổi nét mặt (cau có) khi bóng hiện ra.
+- "Bong bóng thoại cũng học được" (nới quy tắc kịch câm cho việc học; chưa chốt bỏ hẳn).
