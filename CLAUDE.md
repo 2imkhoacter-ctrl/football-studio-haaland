@@ -33,7 +33,7 @@ Làm được: tạo dáng bằng IK (kéo vòng vàng/xanh/trắng), xoay 360°
 Ảnh đầu kiểu mới (data/heads/haaland_front_v2_vectorface.png): không lông mày, không miệng, khung mắt tô xanh #00FF00, nền trong suốt. Khi bật, app khử màu xanh (keyGreen), tự tìm 2 mắt, vẽ lòng trắng/con ngươi/mí SAU ảnh và lông mày/miệng TRƯỚC ảnh (drawFaceBack/drawFaceFront). Trạng thái ở S.face (cũng nằm trong keyframe để chớp mắt/đổi biểu cảm). Hiện chỉ có góc chính diện; 4 góc còn lại chưa có ảnh kiểu mới.
 
 ## Vật phẩm (props)
-S.props (PROP_DEF/PROP_DRAW/drawProps): mỗi món có show, layer (trước/sau nhân vật), attach (free/fL/fR/hL/hR), x, y, size, rot; nằm trong keyframe và trạng thái lưu. Đã có **bóng** (PNG của chủ dự án, hoặc vẽ vector) và **cúp** (PNG; ảnh nhúng sẵn trong HTML, đổi được bằng ô \"Đổi ảnh\"; bản sạch ở assets/props/). Có thêm **khung thành** (vector, nhìn chính diện, mặc định vẽ sau nhân vật, gốc ở giữa vạch gôn). Làm tiếp từng món: đối thủ (nhân vật thứ hai), khán đài. Lưu ý bản quyền: cúp Premier League là biểu tượng đã đăng ký, cân nhắc khi đăng video.
+S.props (PROP_DEF/PROP_DRAW/drawProps): mỗi món có show, layer (trước/sau nhân vật), attach (free/fL/fR/hL/hR), x, y, size, rot; nằm trong keyframe và trạng thái lưu. Đã có **bóng** (PNG của chủ dự án, hoặc vẽ vector) và **cúp** (PNG; ảnh nhúng sẵn trong HTML, đổi được bằng ô \"Đổi ảnh\"; bản sạch ở assets/props/). Có thêm **khung thành** (vector, nhìn chính diện, mặc định vẽ sau nhân vật, gốc ở giữa vạch gôn). Có **nền sân** (id scene: trời, khán đài đông bằng pattern, biển quảng cáo, cỏ cắt sọc; style stands/grass; vẽ đầu tiên; PNG xuất dùng khung đầy đủ 600x720 khi bật). Làm tiếp từng món: đối thủ (nhân vật thứ hai), khán đài. Lưu ý bản quyền: cúp Premier League là biểu tượng đã đăng ký, cân nhắc khi đăng video.
 
 ## Chạy và kiểm tra
 Chạy máy chủ tĩnh ở gốc kho, mở `app/football-studio.html?nosave`. Biến toàn cục để thử: `window.__S` (state), `window.__render`. Để kiểm tra bằng mắt cần trình duyệt; nếu môi trường không có thì nói rõ là **chưa xem bằng mắt**.
@@ -47,6 +47,7 @@ Chạy máy chủ tĩnh ở gốc kho, mở `app/football-studio.html?nosave`. B
 
 ## Cách làm việc khi chủ dự án gửi ảnh lỗi
 Dựng lại đúng tư thế/góc quay (nạp `data/characters/haaland-final.json`, đặt yaw), phóng to vùng khoanh, tìm nguyên nhân gốc, sửa tổng quát, kiểm tra lại, báo ngắn: đã sửa gì, đã thử ở đâu, chưa thử gì.
+
 
 
 
