@@ -1177,6 +1177,7 @@ function renderOne(target=fig,preview=true){
    const im=el('image',{x:ix,y:iy,width:H.size,height:H.size,preserveAspectRatio:'xMidYMid meet'},ig);
    const imageSource=separateEyes?meta.eyePlate:src;
    im.setAttribute('href',imageSource);im.setAttributeNS('http://www.w3.org/1999/xlink','href',imageSource);
+   if(faceActive&&S.face&&S.face.mouthKind==='siu'&&useKey!=='front'&&meta.edgeR&&!separateEyes)siuWarp(ig,meta,imageSource,ix,iy,H.size,useKey);
    if(separateEyes)drawSeparateEyes(ig,meta,ix,iy,H.size,K,useKey,eyeTurn,eyeScale);
    if(faceActive)drawFaceFront(ig,meta,ix,iy,H.size,K,useKey);
   };
@@ -1822,7 +1823,7 @@ $('pkAttach').onchange=e=>{
 $('pkReset').onclick=()=>{S.props[S.propSel]=Object.assign({},PROP_DEF[S.propSel]);syncProps();render()};// ---- vector face UI ----
 const FACE_UI=[['Nhìn ngang','lookX',-100,100],['Nhìn dọc','lookY',-100,100],['Cỡ con ngươi (%)','pupil',50,160],['Mí mắt trái (0 mở - 100 nhắm)','lidL',0,100],['Mí mắt phải','lidR',0,100],['Lông mày: độ cao trái','browHL',-100,100],['Lông mày: độ cao phải','browHR',-100,100],['Lông mày: độ dày (%)','browThick',50,200],['Miệng: độ mở','mouthOpen',0,100],['Miệng: dời ngang','mouthDx',-100,100],['Miệng: dời dọc','mouthDy',-100,100],['Miệng: to nhỏ (%)','mouthScale',50,200]];
 const BROW_NAMES=[['normal','Bình thường'],['angry','Giận'],['sad','Buồn / lo'],['surprised','Ngạc nhiên'],['skeptic','Nghi ngờ'],['happy','Vui'],['focus','Nhíu / tập trung'],['smug','Thách thức']];
-const MOUTH_NAMES=[['closed','Ngậm'],['smile','Cười mỉm'],['smirk','Nhếch mép'],['sad','Buồn'],['grin','Cười toe (lộ răng)'],['a','Há "a"'],['o','Tròn "o"'],['teeth','Nghiến răng'],['tongue','Le lưỡi']];
+const MOUTH_NAMES=[['closed','Ngậm'],['smile','Cười mỉm'],['smirk','Nhếch mép'],['sad','Buồn'],['grin','Cười toe (lộ răng)'],['a','Há "a"'],['o','Tròn "o"'],['teeth','Nghiến răng'],['tongue','Le lưỡi'],['siu','Chu môi "siuuu"']];
 BROW_NAMES.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;$('fcBrow').appendChild(o)});
 MOUTH_NAMES.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;$('fcMouth').appendChild(o)});
 FACE_UI.forEach(([label,key,mn,mx])=>{const r=document.createElement('div');r.className='row';r.innerHTML=`<label>${label} <b id="fv_${key}">0</b></label><input type="range" id="fs_${key}" min="${mn}" max="${mx}" value="0">`;$('fcSliders').appendChild(r);
@@ -2101,7 +2102,7 @@ async function ensureKeyed(metaKey,src){
  try{
   const r=await keyGreen(src);
   if(metaKey==='haaland-live-front'&&r?.eyes.length)Object.assign(meta,await measureNeck(src));
-  if(r&&r.eyes.length>=1){meta.keyed=r.url;meta.eyes=r.eyes;meta.holeMask=r.holeMask;meta.silMask=r.silMask;meta.eyePlate=r.eyePlate}else{meta.eyes=[]}
+  if(r&&r.eyes.length>=1){meta.keyed=r.url;meta.eyes=r.eyes;meta.holeMask=r.holeMask;meta.silMask=r.silMask;meta.edgeR=r.edgeR;meta.eyePlate=r.eyePlate}else{meta.eyes=[]}
  }catch(e){meta.eyes=[]}
  render();
 }
@@ -2119,6 +2120,8 @@ function keyGreen(src){
   x.putImageData(img,0,0);
   const mk=arr=>{const m=document.createElement('canvas');m.width=m.height=N;const mx=m.getContext('2d'),id=mx.createImageData(N,N);for(let i=0;i<N*N;i++){id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=arr[i];id.data[i*4+3]=255}mx.putImageData(id,0,0);return m.toDataURL('image/png')};
   const holeMask=mk(hole),silMask=mk(sil);
+  const NR=256,edgeR=new Array(NR).fill(-1); // mép phải của hình đầu theo từng hàng (0..1), dùng để kéo mõm ra
+  for(let r=0;r<NR;r++){const ya=Math.floor(r*N/NR),yb2=Math.floor((r+1)*N/NR);let best=-1;for(let yy=ya;yy<yb2;yy++)for(let xx=N-1;xx>best;xx--)if(sil[yy*N+xx]){best=xx;break}edgeR[r]=best<0?-1:(best+1)/N}
   // find the two biggest transparent-by-key blobs (the eye holes)
   const lab=new Int32Array(N*N),blobs=[];let id=0;const st=new Int32Array(N*N);
   for(let s=0;s<N*N;s++){ if(!mask[s]||lab[s])continue; id++;let sp=0,a=0,x0=N,y0=N,x1=0,y1=0,sx=0,sy=0;st[sp++]=s;lab[s]=id;
@@ -2171,7 +2174,7 @@ function keyGreen(src){
     w:(b.x1+1-b.x0)/N,h:(b.y1+1-b.y0)/N,contour:[...left,...right.reverse()],lidIndex:index};
   });
   if(eyes.length)x.putImageData(plate,0,0);
-  res({url:keyedUrl,eyes,holeMask,silMask,eyePlate:eyes.length?c.toDataURL('image/png'):null});
+  res({url:keyedUrl,eyes,holeMask,silMask,edgeR,eyePlate:eyes.length?c.toDataURL('image/png'):null});
  }catch(err){rej(err)}};im.onerror=()=>rej(Error('anh loi'));im.src=src});
 }
 function maskedGroup(g,url,ix,iy,size,id){
@@ -2215,7 +2218,33 @@ function drawSeparateEyes(g,meta,ix,iy,size,K,view,turn,amount){
   svgn('path',{d,fill:'none',stroke:'#171414','stroke-width':size*.007,'stroke-linejoin':'round','vector-effect':'non-scaling-stroke'},group);
  }
 }
+// ===== Môi chu "siuuu": KÉO chính đầu ra phía trước ở vùng miệng (không dán ống lên mặt) =====
+function siuGeom(meta,ix,iy,size,view){
+ const F=Object.assign({},FACE_DEF,S.face),eyes=meta.eyes,one=eyes.length===1,e0=eyes[0],e1=eyes[eyes.length-1],sep=one?e0.w*2.0:e1.cx-e0.cx;
+ const shift=one?e0.w*.3:(view==='front'||view==='back'?0:sep*.14);
+ const anchor=meta.mouthAnchor||[(one?e0.cx:(e0.cx+e1.cx)/2)+shift,((e0.cy+e1.cy)/2)+(one?.9:1.05)*sep];
+ const mx=ix+anchor[0]*size+F.mouthDx/100*sep*size*.5,my=iy+anchor[1]*size+F.mouthDy/100*sep*size*.5;
+ const W=sep*size*(one?.33:(view==='front'?.95:.78))*F.mouthScale/100;
+ return {mx,my,W,one,Lp:(one?1.1:.95)*W};
+}
+function siuEdge(meta,iy,size,y){const r=Math.max(0,Math.min(meta.edgeR.length-1,Math.floor((y-iy)/size*meta.edgeR.length)));return meta.edgeR[r]}
+function siuWarp(ig,meta,href,ix,iy,size,view){
+ const G=siuGeom(meta,ix,iy,size,view),x0=G.mx-.3*G.W,yc=G.my+.05*G.W,hb=1.15*G.W,wIn=ix+size-x0;
+ if(!(wIn>4)||!(G.W>2))return;
+ const uid=(siuWarp.n=(siuWarp.n||0)+1),defs=svgn('defs',{},ig),img=svgn('image',{id:'siuHead'+uid,x:ix,y:iy,width:size,height:size,preserveAspectRatio:'xMidYMid meet'},defs);
+ img.setAttribute('href',href);img.setAttributeNS('http://www.w3.org/1999/xlink','href',href);
+ const top=yc-hb,n=Math.max(16,Math.min(120,Math.round(2*hb/.7))),dy=2*hb/n;
+ for(let i=0;i<n;i++){
+  const y0=top+i*dy,ym=y0+dy/2,u=(ym-yc)/hb,p=1-Math.pow(Math.min(1,Math.abs(u)),2.3);   // phồng tròn, đỉnh phẳng rộng
+  let er=0,cnt=0;for(const o of [-2,-1,0,1,2]){const e=siuEdge(meta,iy,size,ym+o*size/256);if(e>=0){er+=e;cnt++}}if(!cnt)continue;er/=cnt;   // làm mịn viền
+  const edge=ix+er*size,span=edge-x0;if(span<2)continue;
+  const sc=(span+p*G.Lp)/span,h=dy+.8;
+  const sv=svgn('svg',{x:x0,y:y0,width:wIn*sc,height:h,viewBox:`${x0} ${y0} ${wIn} ${h}`,preserveAspectRatio:'none',overflow:'hidden'},ig);
+  const u2=svgn('use',{},sv);u2.setAttribute('href','#siuHead'+uid);u2.setAttributeNS('http://www.w3.org/1999/xlink','href','#siuHead'+uid);
+ }
+}
 function drawFaceFront(g,meta,ix,iy,size,K,view){
+ const outerG=g; // kiểu miệng 'siu' nhô ra ngoài viền đầu nên vẽ ngoài lớp cắt
  g=maskedGroup(g,meta.silMask,ix,iy,size,'face-sil-mask'); // brows and mouth never leave the head outline
  const F=Object.assign({},FACE_DEF,S.face),eyes=meta.eyes,lw=size*.0068,hairCol=F.browColor||K.hair||'#c9a227';
  const kind=BROWS[F.browKind]||BROWS.normal,eh=Math.max(...eyes.map(e=>e.h))*size;
@@ -2232,7 +2261,7 @@ function drawFaceFront(g,meta,ix,iy,size,K,view){
  const anchor=meta.mouthAnchor||[(one?e0.cx:(e0.cx+e1.cx)/2)+shift,((e0.cy+e1.cy)/2)+(one?.9:1.05)*sep];
  const mx=ix+anchor[0]*size+F.mouthDx/100*sep*size*.5,my=iy+anchor[1]*size+F.mouthDy/100*sep*size*.5;
  const W=sep*size*(one?.33:(view==='front'?.95:.78))*F.mouthScale/100,op=F.mouthOpen/100,k=F.mouthKind,OUTC='#101418',dark='#3d0e12',pink='#e0556a';
- const grp=svgn('g',{transform:`translate(${mx},${my})`},g);
+ const grp=svgn('g',{transform:`translate(${mx},${my})`},k==='siu'?outerG:g);
  const line=(d,fill)=>svgn('path',{d,fill:fill||'none',stroke:OUTC,'stroke-width':lw,'stroke-linecap':'round','stroke-linejoin':'round'},grp);
  if(k==='closed'){line(`M${-W*.5},${W*.02} Q${-W*.05},${W*.09} ${W*.5},${-W*.03}`);line(`M${W*.5},${-W*.03} q${W*.05},${-W*.01} ${W*.075},${-W*.075}`)}
  else if(k==='smile')line(`M${-W*.5},${-W*.04} Q0,${W*.5} ${W*.5},${-W*.04}`);
@@ -2251,6 +2280,16 @@ function drawFaceFront(g,meta,ix,iy,size,K,view){
   svgn('line',{x1:-W*.4,y1:h/2,x2:W*.4,y2:h/2,stroke:OUTC,'stroke-width':lw*.7},grp);for(const f of [-.2,0,.2])svgn('line',{x1:W*f,y1:0,x2:W*f,y2:h,stroke:OUTC,'stroke-width':lw*.7},grp);}
  else if(k==='tongue'){svgn('path',{d:`M${-W*.16},${W*.1} q0,${W*(.18+.2*op)} ${W*.16},${W*(.18+.2*op)} q${W*.16},0 ${W*.16},${-W*(.18+.2*op)} Z`,fill:pink,stroke:OUTC,'stroke-width':lw,'stroke-linejoin':'round'},grp);
   line(`M${-W*.5},${-W*.04} Q0,${W*.5} ${W*.5},${-W*.04}`);}
+ else if(k==='siu'){ // môi CHU "uuu": không viền, không màu cầu kỳ, chỉ màu da + lỗ tối. Nhìn nghiêng: đầu được kéo nhô ra (siuWarp), ở đây chỉ vẽ lỗ ở đầu mõm; nhìn thẳng: khối tròn phồng
+  const sk=meta.skin||K.skin,warped=view!=='front'&&meta.edgeR&&meta.edgeR.length,yb=W*.12,hole='#3d0e12';
+  if(view==='front'){
+   svgn('ellipse',{cx:0,cy:yb,rx:W*.39,ry:W*.3,fill:sk},grp);
+   svgn('ellipse',{cx:0,cy:yb,rx:W*(.1+.05*op),ry:W*(.08+.15*op),fill:hole},grp);
+  }else if(warped){
+   const G=siuGeom(meta,ix,iy,size,view),er=siuEdge(meta,iy,size,G.my);
+   if(er>=0){const tipX=ix+er*size+G.Lp-mx;svgn('ellipse',{cx:tipX-W*.22,cy:W*.05,rx:W*(one?.1:.13),ry:W*(.2+.1*op),fill:hole},grp)}
+  }
+ }
 }function measureNeck(src){
  return new Promise((res,reject)=>{const im=new Image();im.onload=()=>{try{
   const N=256,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d');x.drawImage(im,0,0,N,N);
@@ -2525,7 +2564,7 @@ function poseAt(t){
 }
 const CAM_FIELDS=['camX','camY','camYaw','dist','focal','camH','ty','size','tilt','free','cam3d','dof'];
 function mixProps(a,b,u,cut){const o={};for(const id in PROP_DEF){const x=Object.assign({},PROP_DEF[id],(a||{})[id]),y=Object.assign({},PROP_DEF[id],(b||{})[id]);o[id]={};for(const k in PROP_DEF[id])o[id][k]=(cut&&id==='scene'&&CAM_FIELDS.includes(k))?x[k]:(typeof PROP_DEF[id][k]==='number')?mix(x[k],y[k],u):(u<.5?x[k]:y[k]);if(x.attach!==y.attach&&(x.attach==='pitch'||y.attach==='pitch')){const anchor=u<.5?x:y;o[id].x=anchor.x;o[id].y=anchor.y}}return o}
-function mixFace(a,b,u){a=Object.assign({},FACE_DEF,a||{});b=Object.assign({},FACE_DEF,b||{});const o={};for(const k in FACE_DEF){o[k]=(typeof FACE_DEF[k]==='number')?mix(a[k],b[k],u):(u<.5?a[k]:b[k])}o.on=a.on;return o}
+function mixFace(a,b,u){a=Object.assign({},FACE_DEF,a||{});b=Object.assign({},FACE_DEF,b||{});const o={};for(const k in FACE_DEF){o[k]=(typeof FACE_DEF[k]==='number')?mix(a[k],b[k],u):(u<.5?a[k]:b[k])}o.on=a.on;const bc=u<.5?a.browColor:b.browColor;if(bc)o.browColor=bc;return o}   // giữ màu lông mày riêng (browColor) khi chạy keyframe; không có thì như cũ
 function applyKey(k,t,animate=S.playing){
  const P=S.pose;P.hip=k.hip.slice();P.type=k.type;P.rotFine=k.rotFine;P.yaw=k.yaw;
  P.limbs=JSON.parse(JSON.stringify(k.limbs));P.poles=JSON.parse(JSON.stringify(k.poles));
