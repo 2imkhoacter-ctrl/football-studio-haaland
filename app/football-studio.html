@@ -2251,6 +2251,7 @@ $('tLoop').onclick=e=>{S.loop=!S.loop;e.target.classList.toggle('on',S.loop);sch
 const HEAD_SHAPE={enabled:false,width:100,height:100,cheek:100,jaw:87,chin:0,ear:100,earY:0,eyeY:0,eyeWidth:100,eyeHeight:100,eyeGap:100,caricature:'none',caricatureStrength:75,extremeEyes:0,extremeEars:0,extremeChin:0,nose:'round',hair:'curls'};
 const PART_LIST=[['eyeL','Mắt trái'],['eyeR','Mắt phải'],['browL','Lông mày trái'],['browR','Lông mày phải'],['nose','Mũi'],['mouth','Miệng'],
  ['earL','Tai trái'],['earR','Tai phải'],['cheekL','Má trái'],['cheekR','Má phải'],['chin','Cằm']];
+const PARTS_ENABLED=false; // tính năng tách bộ phận đã TẮT theo yêu cầu chủ dự án (chưa đạt); mã giữ lại, không dùng
 const PART_DEF={on:false,dx:0,dy:0,sx:100,sy:100,rot:0,flip:false,size:100};
 const HEAD_RANGES=[
  ['Bề ngang đầu','width',35,280],['Chiều cao đầu','height',45,300],
@@ -2588,8 +2589,8 @@ function setPart(patch){
 })();
 function syncParts(){
  const photo=isPhotoHead({...HEAD_SHAPE,...S.head.shape});
- $('partsBox').hidden=!photo;
- if(!photo)return;
+ $('partsBox').hidden=true;
+ if(!PARTS_ENABLED||!photo)return;
  const p=curPart();
  $('partSel').value=partSel;$('partOn').checked=!!p.on;$('partFlip').checked=!!p.flip;
  for(const [,k] of PART_SL){$('pt_'+k).value=p[k];$('ptv_'+k).textContent=p[k]}
@@ -2638,7 +2639,7 @@ function partSkin(src,r){
  return n>3?`rgb(${R/n|0},${G/n|0},${B/n|0})`:null;
 }
 function partRegions(parts,fit){
- if(!parts||!fit)return [];
+ if(!PARTS_ENABLED||!parts||!fit)return [];
  const out=[];
  for(const [name] of PART_LIST){
   const p=parts[name];if(!p||!p.on)continue;
@@ -2774,7 +2775,8 @@ async function loadViniHeads(head){
   if(!S.head.bundledVini||slug(S.look.name)!=='vinijr')await $('viniPreset').onclick();
   if(!S.head.bundledVini||slug(S.look.name)!=='vinijr')return;
   S.head.shape={...HEAD_SHAPE,enabled:true,base:'vini-photo',width:122,jaw:150,cheek:125,chin:6,eyeHeight:75,eyeWidth:92,eyeGap:92,
-   parts:{browL:{on:true,dy:14,rot:6,sx:115,sy:120},browR:{on:true,dy:14,rot:-6,sx:115,sy:120},mouth:{on:true,sx:85,sy:90,dy:-4}}};
+   parts:{}};
+  S.look.skin='#934e35';
   S.head.size=235;
   Object.assign(S.face,{on:true,lookX:29,lookY:4,pupil:75,browKind:'angry',browThick:165,mouthKind:'closed',mouthScale:106});
   syncAll();render();
