@@ -1,2 +1,5 @@
 node_modules/
 out/
+public/studio.html
+public/film.json
+public/anim.json
