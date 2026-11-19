@@ -1380,7 +1380,7 @@ $('holeAuto').onclick=()=>{S.body.holeAuto=S.body.holeAuto?0:1;syncHoleAuto();re
 // A prop is a drawn object with its own position / size / spin / layer. It is either FREE (stage coordinates) or ATTACHED to a hand / foot
 // (then x,y are an offset from that joint, so the ball follows the kicking foot). Everything is part of the keyframes.
 const PROP_DEF={
- scene:{show:false,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,tilt:0,style:'stands'},
+ scene:{show:true,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,tilt:10,style:'night360'},
  ball:{show:false,layer:'front',attach:'free',x:430,y:612,size:100,rot:0,style:'png'},
  trophy:{show:false,layer:'front',attach:'free',x:150,y:540,size:100,rot:0,style:'png'},
  goal:{show:false,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,style:'draw'}
@@ -1939,7 +1939,9 @@ $('jsonFile').onchange=async e=>{
   const d=JSON.parse(await file.text());
   if(!d||typeof d!=='object'||Array.isArray(d))throw Error('JSON sai định dạng');
   if(d.head?.src&&!d.head.front)d.head.front=d.head.src;
+  const sceneKeep={...S.props.scene};
   applyState(d);
+  if(!(d.props&&d.props.scene&&d.props.scene.show))Object.assign(S.props.scene,sceneKeep); // file không có sân thì giữ sân đang dùng
   const head=S.head;
   const images=VIEWS.flatMap(([,view])=>[
    ['neutral',view,head[view]],
@@ -2912,6 +2914,9 @@ async function loadViniHeads(head){
  if(!NOSAVE){try{d=JSON.parse(localStorage.getItem(SAVEKEY)||'null')}catch(e){}}
  const bundled=JSON.parse($('bundled-character').textContent);
  applyState(d||bundled);
+ // Sân đêm 360° là cảnh mặc định: bật ở lần mở đầu tiên (kể cả trình duyệt đã có dữ liệu lưu cũ) và mọi lần mở ?nosave.
+ {let flagged=false;try{flagged=!!localStorage.getItem('fs_scene360_default_v1')}catch{}
+  if(!d||!flagged){Object.assign(S.props.scene,{show:true,style:'night360',x:300,y:640,rot:0,tilt:10,size:100,layer:'back'});if(!NOSAVE)try{localStorage.setItem('fs_scene360_default_v1','1')}catch{}}}
  if(S.head.bundledVini&&slug(S.look.name)==='vinijr'){
   await loadViniHeads(S.head);
  }else if(S.head.bundledHaaland||slug(S.look.name)===slug(bundled.look.name)){
