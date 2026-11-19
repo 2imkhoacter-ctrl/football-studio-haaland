@@ -6,7 +6,7 @@ Chủ dự án là người làm YouTube người Việt. Mục tiêu dài hạn
 Làm được: tạo dáng bằng IK (kéo vòng vàng/xanh/trắng), xoay 360°, đổi tỉ lệ từng bộ phận, màu, đầu 5 góc tự khớp cổ áo, bàn tay/bàn chân xoay được, tay trước/sau thân, 6 ô in (số, chữ, logo ảnh) trên áo/quần/lưng, hoạt hình keyframe, xuất PNG.
 
 ## Quy tắc chủ dự án (đã bị "cháy" nhiều lần, TUYỆT ĐỐI giữ)
-1. **Không bao giờ reset hay ghi đè thông số đã chốt.** File chốt: `data/characters/haaland-final.json` (nạp bằng nút "Nạp JSON"). Thông số tự lưu trong localStorage khóa `fs_state_v2`. Khi thêm tham số mới, mặc định phải để hình **không đổi** trừ khi chủ dự án yêu cầu.
+1. **Không bao giờ reset hay ghi đè thông số đã chốt.** File chốt: `data/characters/haaland-final.json` (bản chốt mới nhất, có sẵn 5 ảnh đầu kiểu mới + khuôn mặt vector bật; bản cũ là `haaland-final-v1.json`; nạp bằng nút "Nạp JSON"). Thông số tự lưu trong localStorage khóa `fs_state_v2`. Khi thêm tham số mới, mặc định phải để hình **không đổi** trừ khi chủ dự án yêu cầu.
 2. **Test trong tab riêng với `?nosave`** (không đụng dữ liệu đã lưu).
 3. Nhãn giao diện tiếng **Việt**; trả lời chủ dự án bằng tiếng Việt, **ngắn gọn**, nói thẳng cái gì đã kiểm tra, cái gì chưa.
 4. **Đừng sửa cơ chế khi chỉ được nhờ chỉnh nét/màu.** Giải pháp phải tổng quát (dùng cho cầu thủ khác), không chỉnh riêng cho Haaland.
@@ -44,4 +44,5 @@ Chạy máy chủ tĩnh ở gốc kho, mở `app/football-studio.html?nosave`. B
 
 ## Cách làm việc khi chủ dự án gửi ảnh lỗi
 Dựng lại đúng tư thế/góc quay (nạp `data/characters/haaland-final.json`, đặt yaw), phóng to vùng khoanh, tìm nguyên nhân gốc, sửa tổng quát, kiểm tra lại, báo ngắn: đã sửa gì, đã thử ở đâu, chưa thử gì.
+
 
