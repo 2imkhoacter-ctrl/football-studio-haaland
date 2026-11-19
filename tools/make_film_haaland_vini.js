@@ -11,7 +11,7 @@ const { S, clamp, mix, wrap, r2, wp, toSceneX, toSceneY, buildActor, cleanKeys }
 const root = path.resolve(__dirname, '..');
 const R = p => JSON.parse(fs.readFileSync(path.join(root, p), 'utf8'));
 const H = R('data/characters/haaland-final.json'), V = R('data/characters/vini-final.json');
-const FPS = 24, CUT = 5.5, DUR = 8.7, N = Math.round(DUR * FPS), o = { FPS, N };
+const FPS = 24, CUT = 5.95, DUR = 9.15, N = Math.round(DUR * FPS), o = { FPS, N };
 const THETA_A = process.env.VIEW_THETA != null ? +process.env.VIEW_THETA : 0;   // chỉ để thử góc (xem tay sau lưng)
 
 const HP = [0, 40], VP = [0, 10];             // chỗ đứng trên sân (mét). Hai người cách xa nhau để cảnh nào cũng không thấy người kia.
@@ -113,7 +113,8 @@ const shots = [
   [0, CUT, t => ({ cx: 0.85 * posX(t), cz: HP[1], theta: THETA_A, size: 80, tilt: 8, waist: 330, dof: 0 })],
   [CUT, DUR + 1, t => ({ cx: VP[0], cz: VP[1], theta: 180, size: 72, tilt: 8, waist: 330, dof: 0 })],
 ];
-const camAt = t => { const s = shots.find(x => t >= x[0] && t < x[1]) || shots[shots.length - 1], c = s[2](t), kz = 100 / c.size; return Object.assign({}, c, { ty: c.waist - (645 - 273 * kz) }); };
+const TILT_UP = { a: 5.3, b: 5.75, ty: +(process.env.TILT_TY || 900) };      // camera NGẨNG LÊN trời theo mắt Haaland (dịch khung dọc)
+const camAt = t => { const s = shots.find(x => t >= x[0] && t < x[1]) || shots[shots.length - 1], c = s[2](t), kz = 100 / c.size, up = t < CUT ? ease(t, TILT_UP.a, TILT_UP.b) : 0; return Object.assign({}, c, { ty: c.waist - (645 - 273 * kz) + TILT_UP.ty * up }); };
 
 const heroKeys = buildActor(hero, H.body, H.face, true, o), viniKeys = buildActor(vini, V.body, V.face, true, o);
 const base = { show: true, layer: 'back', attach: 'free', style: 'night360', free: 1 };
