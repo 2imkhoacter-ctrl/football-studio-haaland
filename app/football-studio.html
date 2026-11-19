@@ -2335,7 +2335,7 @@ function makeMannequin(){
  S.head.shape={...HEAD_SHAPE,enabled:true,base:'mannequin',width:100,height:100};
  S.head.front=S.head.q45=S.head.side=S.head.q135=S.head.back=null;S.head.expressions={};S.headMeta={};
  S.head.size=200;S.head.rot=0;S.head.yaw=0;S.head.x=0;S.head.y=0;
- Object.assign(S.look,{name:'NGƯỜI NỘM',num:0,skin:'#d9dfe4',shirt:'#c4ccd3',numc:'#c4ccd3',shorts:'#aeb8c1',socks:'#c4ccd3',shoes:'#66717b',hair:'#c4ccd3'});
+ Object.assign(S.look,{name:'NGƯỜI NỘM',num:0,skin:'#f0f2f4',shirt:'#d6dbe0',numc:'#d6dbe0',shorts:'#c3cad1',socks:'#d6dbe0',shoes:'#7a858f',hair:'#d6dbe0'});
  S.face={...FACE_DEF,on:false};
 }
 $('castMannequin').onclick=()=>{addCast();makeMannequin();afterSwap()};
@@ -2634,25 +2634,22 @@ function applyHaalandWarp(group,h,ix,iy,size){
 }
 // Đầu ma-nơ-canh (người nộm tập): quả cầu lưới không mặt, các đường kinh tuyến xoay theo hướng đầu.
 function drawMannequinHead(g,K,yaw,h){
- // khung đầu thon như đầu người: rộng ~88, cao ~136, hàm thu nhỏ dần về cằm
+ // Đầu ma-nơ-canh bóng: hình trứng nhẵn không mặt (rộng ~88, cao ~136), hàm thu về cằm, cổ thon, có vệt bóng
  const R=44*(h.width||100)/100,Ry=68*(h.height||100)/100,cx=100,cy=102,ink='#2b343c',skin=K.skin;
  const taper=a=>a<0?1-.30*Math.pow(-Math.sin(a),1.3):1;
  const pt=(a,ph)=>[cx+R*Math.cos(a)*taper(a)*Math.sin(ph),cy-Ry*Math.sin(a)];
- el('path',{d:'M87 140 L87 192 Q100 198 113 192 L113 140Z',fill:skin,stroke:ink,'stroke-width':3,'stroke-linejoin':'round'},g);
+ el('path',{d:'M88 138 L88 192 Q100 198 112 192 L112 138Z',fill:skin,stroke:ink,'stroke-width':3,'stroke-linejoin':'round'},g);
  let o='';for(let i=0;i<=72;i++){const a=-Math.PI/2+i/72*Math.PI,[x,y]=pt(a,Math.PI/2);o+=(o?' L':'M')+x.toFixed(1)+' '+y.toFixed(1)}
  for(let i=72;i>=0;i--){const a=-Math.PI/2+i/72*Math.PI,[x,y]=pt(a,-Math.PI/2);o+=' L'+x.toFixed(1)+' '+y.toFixed(1)}
- el('path',{d:o+'Z',fill:skin,stroke:ink,'stroke-width':3.4,'stroke-linejoin':'round'},g);
- el('rect',{x:79,y:170,width:42,height:12,rx:6,fill:skin,stroke:ink,'stroke-width':3},g);
- const grid=el('g',{fill:'none',stroke:ink,'stroke-width':1.4,'stroke-linecap':'round','stroke-opacity':.75},g);
- for(let j=0;j<12;j++){
-  const ph=j*Math.PI/6-yaw;if(Math.cos(ph)<.04)continue;
-  let d='';for(let lat=-86;lat<=86;lat+=8){const [x,y]=pt(lat*Math.PI/180,ph);d+=(d?' L':'M')+x.toFixed(1)+' '+y.toFixed(1)}
-  el('path',{d},grid);
- }
- for(let lat=-66;lat<=66;lat+=22){
-  const a=lat*Math.PI/180,[x1,y]=pt(a,-Math.PI/2),[x2]=pt(a,Math.PI/2);
-  el('path',{d:`M${x1} ${y} Q${cx} ${y+6} ${x2} ${y}`},grid);
- }
+ o+='Z';
+ const cp=el('clipPath',{id:'mannequin-clip'},g);el('path',{d:o},cp);
+ el('path',{d:o,fill:skin,stroke:'none'},g);
+ const sh=el('g',{'clip-path':'url(#mannequin-clip)'},g),s=Math.sin(Math.abs(yaw)),c=Math.cos(yaw);
+ el('ellipse',{cx:cx+R*(.78+.1*s),cy:cy+Ry*.12,rx:R*.62,ry:Ry*.98,fill:'#000','fill-opacity':.10},sh); // bóng phía tối
+ el('ellipse',{cx:cx-R*(.42*c-.30*s),cy:cy-Ry*.46,rx:R*.17,ry:Ry*.30,fill:'#fff','fill-opacity':.9,transform:`rotate(-10 ${cx} ${cy})`},sh); // vệt bóng
+ el('ellipse',{cx:cx-R*(.20*c-.20*s),cy:cy-Ry*.78,rx:R*.07,ry:Ry*.06,fill:'#fff','fill-opacity':.9},sh);
+ el('path',{d:o,fill:'none',stroke:ink,'stroke-width':3.4,'stroke-linejoin':'round'},g);
+ el('path',{d:`M${cx-R*.16} ${cy+Ry*.80} Q${cx} ${cy+Ry*.86} ${cx+R*.16} ${cy+Ry*.80}`,fill:'none',stroke:ink,'stroke-width':1.6,'stroke-linecap':'round','stroke-opacity':.55},g); // nếp cằm
 }function drawCustomHead(target,nk,H,K,pr,yaw,neck){
  const h={...HEAD_SHAPE,...H.shape},c=Math.cos(yaw),s=Math.abs(Math.sin(yaw)),back=c<-.16;
  const exact=h.base==='haaland',longFace=h.base==='long-cartoon';
