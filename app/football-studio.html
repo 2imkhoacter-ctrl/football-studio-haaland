@@ -128,7 +128,7 @@ input[type=file]{font-size:12px;max-width:100%}
    <div class="sub" id="expressionStatus" role="status">Ảnh PNG theo từng góc. Thiếu ảnh biểu cảm sẽ dùng ảnh thường của góc đó. Thêm key để lưu biểu cảm vào chuyển động.</div>
    <div class="row"><button id="headLoad">Nạp đầu theo tên cầu thủ (data/heads)</button></div>
    <div class="sub" id="headStatus"></div>
-   <div class="sub">Mặt trước</div><input type="file" id="headFront" accept="image/*">
+   <div class="row"><label>Nạp bộ 5 ảnh đầu kiểu mới</label><input type="file" id="headSet" accept="image/png" multiple></div><div class="sub">Chọn cả 5 file cùng lúc; tên file có front, q45, side, q135, back.</div>`n   <div class="sub">Mặt trước</div><input type="file" id="headFront" accept="image/*">
    <div class="sub">Mặt nghiêng (vẽ nhìn sang PHẢI, tự lật khi quay trái)</div><input type="file" id="headSide" accept="image/*">
    <div class="sub">Sau gáy</div><input type="file" id="headBack" accept="image/*">
    <div class="row"><label>Độ lún cổ (cổ ngắn) <b id="hSinkVal">34</b></label><input type="range" id="hSink" min="-10" max="70" value="34"></div>
@@ -930,11 +930,11 @@ function render(target=fig,preview=true){
   }
   target.appendChild(hg);
   const ig=el('g',{transform:flip?`translate(${2*(ix+H.size/2)},0) scale(-1,1)`:''},hg);
-  const faceActive=faceOn&&meta.keyed&&meta.eyes&&meta.eyes.length===2;
-  if(faceActive)drawFaceBack(ig,meta,ix,iy,H.size,K);
+  const faceActive=faceOn&&meta.keyed&&meta.eyes&&meta.eyes.length>=1;
+  if(faceActive)drawFaceBack(ig,meta,ix,iy,H.size,K,useKey);
   const im=el('image',{x:ix,y:iy,width:H.size,height:H.size,preserveAspectRatio:'xMidYMid meet'},ig);
   im.setAttribute('href',src);im.setAttributeNS('http://www.w3.org/1999/xlink','href',src);
-  if(faceActive)drawFaceFront(ig,meta,ix,iy,H.size,K);
+  if(faceActive)drawFaceFront(ig,meta,ix,iy,H.size,K,useKey);
  }
  drawLayer(target,[
   ...arms.filter(k=>!farSleeves.includes(k)).map(k=>armGeometry[k].sleeve),
@@ -1186,7 +1186,12 @@ $('headReset').onclick=()=>{S.head.yaw=0;S.head.rot=0;$('hYaw').value=0;$('hRot'
   catch{$('headStatus').textContent='Ảnh không đọc được.'}
  };
 });
-$('clearHead').onclick=()=>{headLoadGeneration++;S.head.front=S.head.q45=S.head.side=S.head.q135=S.head.back=null;S.head.expressions={};S.headMeta={};diskImages.clear();['headFront','headSide','headBack'].forEach(i=>$(i).value='');render()};
+$('headSet').onchange=async e=>{
+ const files=[...e.target.files];e.target.value='';let n=0;const head=S.head;
+ for(const f of files){const nm=f.name.toLowerCase();const k=['q135','q45','front','side','back'].find(x=>nm.includes(x));if(!k)continue;
+  try{await loadHeadImage(head,'neutral',k,await readData(f));n++}catch{}}
+ $('headStatus').textContent='Đã nạp '+n+' ảnh đầu.';render();
+};$('clearHead').onclick=()=>{headLoadGeneration++;S.head.front=S.head.q45=S.head.side=S.head.q135=S.head.back=null;S.head.expressions={};S.headMeta={};diskImages.clear();['headFront','headSide','headBack'].forEach(i=>$(i).value='');render()};
 
 const readData=file=>new Promise((resolve,reject)=>{
  const reader=new FileReader();
@@ -1389,7 +1394,7 @@ async function ensureKeyed(metaKey,src){
  const meta=S.headMeta[metaKey];if(!meta)return;meta.keyTried=true;
  try{
   const r=await keyGreen(src);
-  if(r&&r.eyes.length===2){meta.keyed=r.url;meta.eyes=r.eyes}else{meta.eyes=[]}
+  if(r&&r.eyes.length>=1){meta.keyed=r.url;meta.eyes=r.eyes}else{meta.eyes=[]}
  }catch(e){meta.eyes=[]}
  render();
 }
@@ -1416,9 +1421,9 @@ function keyGreen(src){
  }catch(err){rej(err)}};im.onerror=()=>rej(Error('anh loi'));im.src=src});
 }
 const svgn=(tag,at,parent)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in at)e.setAttribute(k,at[k]);if(parent)parent.appendChild(e);return e};
-function drawFaceBack(g,meta,ix,iy,size,K){
- const F=Object.assign({},FACE_DEF,S.face),sk=meta.skin||K.skin,[eL,eR]=meta.eyes;
- [[eL,F.lidL],[eR,F.lidR]].forEach(([e,lid])=>{
+function drawFaceBack(g,meta,ix,iy,size,K,view){
+ const F=Object.assign({},FACE_DEF,S.face),sk=meta.skin||K.skin,eyes=meta.eyes;
+ eyes.map((e,i)=>[e,eyes.length===1?Math.max(F.lidL,F.lidR):(i?F.lidR:F.lidL)]).forEach(([e,lid])=>{
   const cx=ix+e.cx*size,cy=iy+e.cy*size,w=e.w*size,h=e.h*size;
   svgn('ellipse',{cx,cy,rx:w*.62,ry:h*.64,fill:'#ffffff'},g);
   const pr=Math.min(w,h)*.30*F.pupil/100,px=cx+F.lookX/100*w*.22,py=cy+h*.04+F.lookY/100*h*.20;
@@ -1429,10 +1434,10 @@ function drawFaceBack(g,meta,ix,iy,size,K){
    svgn('path',{d:`M${cx-w*.55},${bot} Q${cx},${bot+h*.10} ${cx+w*.55},${bot}`,fill:'none',stroke:'#101418','stroke-width':size*.006,'stroke-linecap':'round'},g);}
  });
 }
-function drawFaceFront(g,meta,ix,iy,size,K){
- const F=Object.assign({},FACE_DEF,S.face),[eL,eR]=meta.eyes,lw=size*.0068,hairCol=F.browColor||K.hair||'#c9a227';
- const kind=BROWS[F.browKind]||BROWS.normal,eh=Math.max(eL.h,eR.h)*size;
- [[eL,kind[0],F.browHL],[eR,kind[1],F.browHR]].forEach(([e,[ho,ang],hs])=>{
+function drawFaceFront(g,meta,ix,iy,size,K,view){
+ const F=Object.assign({},FACE_DEF,S.face),eyes=meta.eyes,lw=size*.0068,hairCol=F.browColor||K.hair||'#c9a227';
+ const kind=BROWS[F.browKind]||BROWS.normal,eh=Math.max(...eyes.map(e=>e.h))*size;
+ eyes.map((e,i)=>{const j=eyes.length===1?0:i;return [e,kind[j],j?F.browHR:F.browHL]}).forEach(([e,[ho,ang],hs])=>{
   const cx=ix+e.cx*size,w=e.w*size*1.12,T=Math.max(3,e.h*size*.28*F.browThick/100),cy=iy+e.y0*size-eh*.55+(ho*eh)-hs/100*eh*.4;
   const arch=F.browKind==='surprised'||F.browKind==='happy'?eh*.18:eh*.06;
   const d=`M${-w/2},0 Q0,${-arch} ${w/2},0`,tr=`translate(${cx},${cy}) rotate(${ang})`;
@@ -1440,8 +1445,11 @@ function drawFaceFront(g,meta,ix,iy,size,K){
   svgn('path',{d,transform:tr,fill:'none',stroke:hairCol,'stroke-width':T,'stroke-linecap':'round'},g);
  });
  // mouth
- const sep=eR.cx-eL.cx,mx=ix+((eL.cx+eR.cx)/2)*size+F.mouthDx/100*sep*size*.5,my=iy+(((eL.cy+eR.cy)/2)+1.05*sep)*size+F.mouthDy/100*sep*size*.5;
- const W=sep*size*.95*F.mouthScale/100,op=F.mouthOpen/100,k=F.mouthKind,OUTC='#101418',dark='#3d0e12',pink='#e0556a';
+ const one=eyes.length===1,e0=eyes[0],e1=eyes[eyes.length-1],sep=one?e0.w*2.0:e1.cx-e0.cx;
+ // turned heads: the mouth sits towards the nose side (the picture faces right); profile: one eye, mouth at the front edge
+ const shift=one?e0.w*.3:(view==='front'||view==='back'?0:sep*.28);
+ const mx=ix+((one?e0.cx:(e0.cx+e1.cx)/2)+shift)*size+F.mouthDx/100*sep*size*.5,my=iy+(((e0.cy+e1.cy)/2)+(one?.9:1.05)*sep)*size+F.mouthDy/100*sep*size*.5;
+ const W=sep*size*(one?.33:.95)*F.mouthScale/100,op=F.mouthOpen/100,k=F.mouthKind,OUTC='#101418',dark='#3d0e12',pink='#e0556a';
  const grp=svgn('g',{transform:`translate(${mx},${my})`},g);
  const line=(d,fill)=>svgn('path',{d,fill:fill||'none',stroke:OUTC,'stroke-width':lw,'stroke-linecap':'round','stroke-linejoin':'round'},grp);
  if(k==='closed')line(`M${-W*.5},0 Q0,${W*.04} ${W*.5},0`);
