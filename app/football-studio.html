@@ -2287,9 +2287,29 @@ function drawCast(target,phase){
 function render(target=fig,preview=true){
  // Sân đêm 360°: người đang chỉnh luôn đứng đúng tâm xoay (hông ở giữa khung) - muốn dời thì đổi tọa độ sân,
  // nếu không khi xoay camera chân sẽ trượt khỏi điểm đã chỉ định.
- if(nightScene()&&S.pose&&S.pose.hip)S.pose.hip[0]=300;
+ if(nightScene()&&S.nightLock!==false&&S.pose&&S.pose.hip)S.pose.hip[0]=300;
  renderOne(target,preview);drawCast(target,'front');
 }
+// Nút khóa/mở khóa: mở khóa = kéo hông tự do như cũ (chân có thể trượt khi xoay camera);
+// khóa lại = vị trí đang thấy được đổi thành tọa độ sân rồi mới khóa, nên người không nhảy chỗ.
+(function(){
+ const bar=document.getElementById('zoomBar');if(!bar)return;
+ const b=document.createElement('button');b.id='nightLockBtn';b.type='button';bar.appendChild(b);
+ const label=()=>{const on=S.nightLock!==false;b.textContent=on?'🔒 Khóa vị trí sân':'🔓 Đang mở khóa';b.classList.toggle('on',on);b.title=on?'Đang khóa: cầu thủ đứng yên tại tọa độ sân khi xoay camera. Bấm để mở khóa và kéo cầu thủ tự do.':'Đang mở khóa: kéo vòng hông để dời cầu thủ. Bấm để khóa lại tại chỗ đang đứng.'};
+ b.onclick=()=>{
+  if(S.nightLock===false){
+   const sc=nightScene();
+   if(sc&&S.pose&&S.pose.hip){
+    const cam=nightCamera(sc),m=(S.pose.hip[0]-300)*cam.distance/cam.focal,th=cam.yaw;
+    sc.x+=m*Math.cos(th)/.068;sc.y-=(-m*Math.sin(th))/.075;
+    S.pose.hip[0]=300;
+   }
+   S.nightLock=true;
+  }else S.nightLock=false;
+  label();render();
+ };
+ label();
+})();
 const EMPTY_HEAD=()=>({expression:'neutral',expressions:{},front:null,q45:null,side:null,q135:null,back:null,size:200,sink:34,rot:0,yaw:0,x:0,y:0});
 function syncCast(){
  const box=$('castList');if(!box)return;box.innerHTML='';
