@@ -83,8 +83,8 @@ const hero = {
 // ---- Vini: nhảy xoay (tay còn ở thấp), đáp xuống quay mặt vào máy rồi MỞ TAY "bụp", hét SIUUU, ưỡn ngực ----
 const ARMS = {
   down: k => ({ hL: [-58 * k, 118 * k, -34 * k], hR: [58 * k, 118 * k, -34 * k] }),
-  open: k => ({ hL: [-120 * k, 78 * k, -66 * k], hR: [120 * k, 78 * k, -66 * k] }),
-  pump: k => ({ hL: [-134 * k, 40 * k, -72 * k], hR: [134 * k, 40 * k, -72 * k] }),
+  open: k => ({ hL: [-92 * k, 98 * k, -52 * k], hR: [92 * k, 98 * k, -52 * k] }),
+  pump: k => ({ hL: [-94 * k, 74 * k, -56 * k], hR: [94 * k, 74 * k, -56 * k] }),
 };
 const T_LAND = CUT + 0.46, T_PUMP = CUT + 1.7;
 const vini = {
@@ -113,7 +113,7 @@ const vini = {
 // ---- camera: 2 cảnh, CẮT thẳng. Cảnh A đi theo Haaland (nhẹ), cảnh B đứng yên ----
 const shots = [
   [0, CUT, t => ({ cx: 0.85 * posX(t), cz: HP[1], theta: THETA_A, size: 80, tilt: 8, waist: 330, dof: 0 })],
-  [CUT, DUR + 1, t => ({ cx: VP[0], cz: VP[1], theta: 180, size: 72, tilt: 8, waist: 330, dof: 0 })],
+  [CUT, DUR + 1, t => ({ cx: VP[0], cz: VP[1], theta: 180, size: +(process.env.VS || 60), tilt: 8, waist: +(process.env.VW || 200), dof: 0 })],
 ];
 const TILT_UP = { a: 5.3, b: 5.75, ty: +(process.env.TILT_TY || 780) };      // camera NGẨNG LÊN trời theo mắt Haaland (dịch khung dọc)
 const camAt = t => { const s = shots.find(x => t >= x[0] && t < x[1]) || shots[shots.length - 1], c = s[2](t), kz = 100 / c.size, up = t < CUT ? ease(t, TILT_UP.a, TILT_UP.b) : 0; return Object.assign({}, c, { ty: c.waist - (645 - 273 * kz) + TILT_UP.ty * up }); };
