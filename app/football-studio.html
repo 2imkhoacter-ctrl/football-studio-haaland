@@ -71,6 +71,14 @@ input[type=file]{font-size:12px;max-width:100%}
    <div class="sub" id="poseStatus" role="status"></div>
    <div class="poses" id="poseList"></div>
   </div>
+  <div class="box"><h3>KHUÔN MẶT VECTOR (thử nghiệm)</h3>
+   <div class="sub">Chỉ chạy với ảnh đầu kiểu mới: không lông mày, không miệng, khung mắt tô xanh lá #00FF00. Hiện mới có ảnh chính diện; góc khác vẫn dùng ảnh gốc.</div>
+   <div class="row"><button id="fcOn">Khuôn mặt vector: TẮT</button></div>
+   <div class="row"><label>Lông mày</label><select id="fcBrow"></select></div>
+   <div class="row"><label>Miệng</label><select id="fcMouth"></select></div>
+   <div id="fcSliders"></div>
+   <div class="row"><button id="fcReset">Về mặc định (giữ bật/tắt)</button></div>
+  </div>
   <div class="box"><h3>IN TRÊN ÁO / QUẦN (số, chữ, logo)</h3>
    <div class="sub">Áo mặt trước có 3 ô, quần 1 ô, lưng có tên + số. Mỗi ô: chữ hoặc ảnh logo, tự đặt vị trí, to nhỏ, xoay.</div>
    <div class="grid4" id="dcBtns" style="grid-template-columns:repeat(3,1fr)"></div>
@@ -897,8 +905,13 @@ function render(target=fig,preview=true){
  const expression=H.expression||'neutral', variants=H.expressions[expression]||{};
  const near=VIEWS.filter(([,key])=>variants[key]||H[key]).sort((a,b)=>Math.abs(a[0]-ang)-Math.abs(b[0]-ang))[0];
  const useKey=near&&Math.abs(near[0]-ang)<=50?near[1]:null;
- const src=useKey&&(variants[useKey]||H[useKey]);
+ const srcRaw=useKey&&(variants[useKey]||H[useKey]);
  const metaKey=useKey&&variants[useKey]?`${expression}:${useKey}`:useKey;
+ // vector face: when ON, the head PNG is used with its neon-green eye holes turned transparent (done once per image)
+ const faceOn=!!(S.face&&S.face.on);
+ const keyMeta=metaKey&&S.headMeta&&S.headMeta[metaKey];
+ if(faceOn&&srcRaw&&keyMeta&&!keyMeta.keyTried)ensureKeyed(metaKey,srcRaw);
+ const src=(faceOn&&keyMeta&&keyMeta.keyed)||srcRaw;
  if(src){
   // Place the image by ITS OWN neck (centre + bottom edge of the neck, measured automatically when the image loads)
   // and put that on the body's neck, a little inside the collar. Works for any player's art, no hand tuning.
@@ -917,8 +930,11 @@ function render(target=fig,preview=true){
   }
   target.appendChild(hg);
   const ig=el('g',{transform:flip?`translate(${2*(ix+H.size/2)},0) scale(-1,1)`:''},hg);
+  const faceActive=faceOn&&meta.keyed&&meta.eyes&&meta.eyes.length===2;
+  if(faceActive)drawFaceBack(ig,meta,ix,iy,H.size,K);
   const im=el('image',{x:ix,y:iy,width:H.size,height:H.size,preserveAspectRatio:'xMidYMid meet'},ig);
   im.setAttribute('href',src);im.setAttributeNS('http://www.w3.org/1999/xlink','href',src);
+  if(faceActive)drawFaceFront(ig,meta,ix,iy,H.size,K);
  }
  drawLayer(target,[
   ...arms.filter(k=>!farSleeves.includes(k)).map(k=>armGeometry[k].sleeve),
@@ -1106,7 +1122,24 @@ $('endReset').onclick=()=>{if(!S.pose.ends)S.pose.ends=DEFAULT_POSE().ends;S.pos
 function syncSide(){const as=S.pose.armSide||{};document.querySelectorAll('#sideRows .grid4').forEach(r=>[...r.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.v===(as[r.dataset.k]||'auto'))))}
 function syncHoleAuto(){$('holeAuto').textContent='Cổ áo tự khớp cổ đầu: '+(S.body.holeAuto?'BẬT':'TẮT');$('holeAuto').classList.toggle('on',!!S.body.holeAuto)}
 $('holeAuto').onclick=()=>{S.body.holeAuto=S.body.holeAuto?0:1;syncHoleAuto();render()};
-// ---- printed items UI ----
+// ---- vector face UI ----
+const FACE_UI=[['Nhìn ngang','lookX',-100,100],['Nhìn dọc','lookY',-100,100],['Cỡ con ngươi (%)','pupil',50,160],['Mí mắt trái (0 mở - 100 nhắm)','lidL',0,100],['Mí mắt phải','lidR',0,100],['Lông mày: độ cao trái','browHL',-100,100],['Lông mày: độ cao phải','browHR',-100,100],['Lông mày: độ dày (%)','browThick',50,200],['Miệng: độ mở','mouthOpen',0,100],['Miệng: dời ngang','mouthDx',-100,100],['Miệng: dời dọc','mouthDy',-100,100],['Miệng: to nhỏ (%)','mouthScale',50,200]];
+const BROW_NAMES=[['normal','Bình thường'],['angry','Giận'],['sad','Buồn / lo'],['surprised','Ngạc nhiên'],['skeptic','Nghi ngờ'],['happy','Vui'],['focus','Nhíu / tập trung'],['smug','Thách thức']];
+const MOUTH_NAMES=[['closed','Ngậm'],['smile','Cười mỉm'],['smirk','Nhếch mép'],['sad','Buồn'],['grin','Cười toe (lộ răng)'],['a','Há "a"'],['o','Tròn "o"'],['teeth','Nghiến răng'],['tongue','Le lưỡi']];
+BROW_NAMES.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;$('fcBrow').appendChild(o)});
+MOUTH_NAMES.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;$('fcMouth').appendChild(o)});
+FACE_UI.forEach(([label,key,mn,mx])=>{const r=document.createElement('div');r.className='row';r.innerHTML=`<label>${label} <b id="fv_${key}">0</b></label><input type="range" id="fs_${key}" min="${mn}" max="${mx}" value="0">`;$('fcSliders').appendChild(r);
+ $('fs_'+key).oninput=e=>{S.face[key]=+e.target.value;$('fv_'+key).textContent=S.face[key];render()}});
+function syncFace(){
+ const F=Object.assign({},FACE_DEF,S.face);S.face=F;
+ $('fcOn').textContent='Khuôn mặt vector: '+(F.on?'BẬT':'TẮT');$('fcOn').classList.toggle('on',!!F.on);
+ $('fcBrow').value=F.browKind;$('fcMouth').value=F.mouthKind;
+ FACE_UI.forEach(([,key])=>{$('fs_'+key).value=F[key];$('fv_'+key).textContent=F[key]});
+}
+$('fcOn').onclick=()=>{S.face.on=!S.face.on;syncFace();render()};
+$('fcBrow').onchange=e=>{S.face.browKind=e.target.value;render()};
+$('fcMouth').onchange=e=>{S.face.mouthKind=e.target.value;render()};
+$('fcReset').onclick=()=>{S.face=Object.assign({},FACE_DEF,{on:S.face.on});syncFace();render()};// ---- printed items UI ----
 S.decalSel=S.decalSel||'f1';
 function dset(patch){S.decals=S.decals||{};S.decals[S.decalSel]=Object.assign(dget(S.decalSel),patch)}
 DECAL_NAMES.forEach(([id,n])=>{const b=document.createElement('button');b.textContent=n;b.dataset.id=id;b.onclick=()=>{S.decalSel=id;syncDecals()};$('dcBtns').appendChild(b)});
@@ -1232,7 +1265,7 @@ $('poseFiles').onchange=async e=>{
  $('poseStatus').textContent=`Đã thêm ${count} tư thế.`+(failed.length?` Tệp lỗi: ${failed.join(', ')}.`:'');
 };
 function syncAll(){
- syncBackdrop();syncEnds();syncSide();syncHoleAuto();syncDecals();
+ syncBackdrop();syncEnds();syncSide();syncHoleAuto();syncDecals();syncFace();
  const P=S.pose,K=S.look,H=S.head;
  $('rotFine').value=P.rotFine;$('yaw').value=P.yaw;syncTorso();syncBody();
  $('pName').value=K.name;$('pNum').value=K.num;$('cShirt').value=K.shirt;$('cNum').value=K.numc;$('cShorts').value=K.shorts;
@@ -1346,7 +1379,89 @@ $('jsonFile').onchange=async e=>{
 // Measure where the neck is inside a head image: the bottom-most opaque row and the centre of the opaque
 // span just above it. Stored as fractions of the image, so any new player's art is aligned automatically.
 S.headMeta=S.headMeta||{};
-function measureNeck(src){
+// ======================= VECTOR FACE (eyes / brows / mouth) =======================
+// The head PNG has NO eyebrows and NO mouth, and its eye holes are flat neon green (#00FF00). We turn the green transparent,
+// then draw eyeballs + pupils + lids BEHIND the image (they show only through the holes) and brows + mouth IN FRONT.
+S.face=S.face||{on:false,lookX:0,lookY:0,pupil:100,lidL:0,lidR:0,browKind:'normal',browHL:0,browHR:0,browThick:100,mouthKind:'closed',mouthOpen:50,mouthDx:0,mouthDy:0,mouthScale:100};
+const FACE_DEF={on:false,lookX:0,lookY:0,pupil:100,lidL:0,lidR:0,browKind:'normal',browHL:0,browHR:0,browThick:100,mouthKind:'closed',mouthOpen:50,mouthDx:0,mouthDy:0,mouthScale:100};
+const BROWS={normal:[[0,0],[0,0]],angry:[[0,14],[0,-14]],sad:[[-.05,-14],[-.05,14]],surprised:[[-.45,0],[-.45,0]],skeptic:[[-.38,-8],[.06,10]],happy:[[-.18,-8],[-.18,8]],focus:[[.08,8],[.08,-8]],smug:[[-.05,10],[-.05,-14]]};
+async function ensureKeyed(metaKey,src){
+ const meta=S.headMeta[metaKey];if(!meta)return;meta.keyTried=true;
+ try{
+  const r=await keyGreen(src);
+  if(r&&r.eyes.length===2){meta.keyed=r.url;meta.eyes=r.eyes}else{meta.eyes=[]}
+ }catch(e){meta.eyes=[]}
+ render();
+}
+function keyGreen(src){
+ return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{try{
+  const N=Math.min(1024,im.naturalWidth||1024),c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0,N,N);
+  const img=x.getImageData(0,0,N,N),d=img.data,mask=new Uint8Array(N*N);
+  for(let i=0;i<N*N;i++){
+   const o=i*4,r=d[o],g=d[o+1],b=d[o+2],gd=g-Math.max(r,b);
+   if(gd>120){d[o+3]=0;mask[i]=1}
+   else if(gd>40&&d[o+3]>0){d[o+3]=Math.round(d[o+3]*(120-gd)/80);if(gd>60)mask[i]=0}
+   if(gd>0&&d[o+3]>0)d[o+1]=Math.min(g,Math.max(r,b)+8);
+  }
+  x.putImageData(img,0,0);
+  // find the two biggest transparent-by-key blobs (the eye holes)
+  const lab=new Int32Array(N*N),blobs=[];let id=0;const st=new Int32Array(N*N);
+  for(let s=0;s<N*N;s++){ if(!mask[s]||lab[s])continue; id++;let sp=0,a=0,x0=N,y0=N,x1=0,y1=0,sx=0,sy=0;st[sp++]=s;lab[s]=id;
+   while(sp){const p=st[--sp],px=p%N,py=(p/N)|0;a++;sx+=px;sy+=py;if(px<x0)x0=px;if(px>x1)x1=px;if(py<y0)y0=py;if(py>y1)y1=py;
+    for(const q of [p-1,p+1,p-N,p+N]){if(q>=0&&q<N*N&&mask[q]&&!lab[q]&&!(q===p-1&&px===0)&&!(q===p+1&&px===N-1)){lab[q]=id;st[sp++]=q}}}
+   blobs.push({a,x0,y0,x1,y1,cx:sx/a,cy:sy/a}); }
+  blobs.sort((p,q)=>q.a-p.a);const big=blobs.slice(0,2).filter(b=>b.a>N*N*.0008).sort((p,q)=>p.cx-q.cx);
+  const eyes=big.map(b=>({x0:b.x0/N,y0:b.y0/N,x1:(b.x1+1)/N,y1:(b.y1+1)/N,cx:b.cx/N,cy:b.cy/N,w:(b.x1+1-b.x0)/N,h:(b.y1+1-b.y0)/N}));
+  res({url:c.toDataURL('image/png'),eyes});
+ }catch(err){rej(err)}};im.onerror=()=>rej(Error('anh loi'));im.src=src});
+}
+const svgn=(tag,at,parent)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in at)e.setAttribute(k,at[k]);if(parent)parent.appendChild(e);return e};
+function drawFaceBack(g,meta,ix,iy,size,K){
+ const F=Object.assign({},FACE_DEF,S.face),sk=meta.skin||K.skin,[eL,eR]=meta.eyes;
+ [[eL,F.lidL],[eR,F.lidR]].forEach(([e,lid])=>{
+  const cx=ix+e.cx*size,cy=iy+e.cy*size,w=e.w*size,h=e.h*size;
+  svgn('ellipse',{cx,cy,rx:w*.62,ry:h*.64,fill:'#ffffff'},g);
+  const pr=Math.min(w,h)*.30*F.pupil/100,px=cx+F.lookX/100*w*.22,py=cy+h*.04+F.lookY/100*h*.20;
+  svgn('circle',{cx:px,cy:py,r:pr,fill:'#101418'},g);
+  svgn('circle',{cx:px-pr*.32,cy:py-pr*.34,r:pr*.26,fill:'#ffffff'},g);
+  if(lid>0){const top=cy-h*.62,bot=top+(h*1.3)*lid/100;
+   svgn('rect',{x:cx-w*.7,y:top-h*.2,width:w*1.4,height:bot-(top-h*.2),fill:sk},g);
+   svgn('path',{d:`M${cx-w*.55},${bot} Q${cx},${bot+h*.10} ${cx+w*.55},${bot}`,fill:'none',stroke:'#101418','stroke-width':size*.006,'stroke-linecap':'round'},g);}
+ });
+}
+function drawFaceFront(g,meta,ix,iy,size,K){
+ const F=Object.assign({},FACE_DEF,S.face),[eL,eR]=meta.eyes,lw=size*.0068,hairCol=F.browColor||K.hair||'#c9a227';
+ const kind=BROWS[F.browKind]||BROWS.normal,eh=Math.max(eL.h,eR.h)*size;
+ [[eL,kind[0],F.browHL],[eR,kind[1],F.browHR]].forEach(([e,[ho,ang],hs])=>{
+  const cx=ix+e.cx*size,w=e.w*size*1.12,T=Math.max(3,e.h*size*.28*F.browThick/100),cy=iy+e.y0*size-eh*.55+(ho*eh)-hs/100*eh*.4;
+  const arch=F.browKind==='surprised'||F.browKind==='happy'?eh*.18:eh*.06;
+  const d=`M${-w/2},0 Q0,${-arch} ${w/2},0`,tr=`translate(${cx},${cy}) rotate(${ang})`;
+  svgn('path',{d,transform:tr,fill:'none',stroke:'#101418','stroke-width':T+lw*2,'stroke-linecap':'round'},g);
+  svgn('path',{d,transform:tr,fill:'none',stroke:hairCol,'stroke-width':T,'stroke-linecap':'round'},g);
+ });
+ // mouth
+ const sep=eR.cx-eL.cx,mx=ix+((eL.cx+eR.cx)/2)*size+F.mouthDx/100*sep*size*.5,my=iy+(((eL.cy+eR.cy)/2)+1.05*sep)*size+F.mouthDy/100*sep*size*.5;
+ const W=sep*size*.95*F.mouthScale/100,op=F.mouthOpen/100,k=F.mouthKind,OUTC='#101418',dark='#3d0e12',pink='#e0556a';
+ const grp=svgn('g',{transform:`translate(${mx},${my})`},g);
+ const line=(d,fill)=>svgn('path',{d,fill:fill||'none',stroke:OUTC,'stroke-width':lw,'stroke-linecap':'round','stroke-linejoin':'round'},grp);
+ if(k==='closed')line(`M${-W*.5},0 Q0,${W*.04} ${W*.5},0`);
+ else if(k==='smile')line(`M${-W*.5},${-W*.04} Q0,${W*.5} ${W*.5},${-W*.04}`);
+ else if(k==='smirk')line(`M${-W*.45},${W*.05} Q${W*.1},${W*.3} ${W*.5},${-W*.12}`);
+ else if(k==='sad')line(`M${-W*.4},${W*.12} Q0,${-W*.2} ${W*.4},${W*.12}`);
+ else if(k==='grin'){const o=.12+.35*op;line(`M${-W*.5},0 Q0,${W*(.35+o)} ${W*.5},0 Q0,${W*.1} ${-W*.5},0 Z`,dark);
+  const cp=svgn('clipPath',{id:'mouth-clip'},grp);svgn('path',{d:`M${-W*.5},0 Q0,${W*(.35+o)} ${W*.5},0 Q0,${W*.1} ${-W*.5},0 Z`},cp);
+  svgn('rect',{x:-W*.5,y:0,width:W,height:W*.17,fill:'#ffffff','clip-path':'url(#mouth-clip)'},grp);
+  line(`M${-W*.5},0 Q0,${W*(.35+o)} ${W*.5},0 Q0,${W*.1} ${-W*.5},0 Z`);}
+ else if(k==='a'){const ry=(.12+.45*op)*W,rx=.3*W;
+  const cp=svgn('clipPath',{id:'mouth-clip'},grp);svgn('ellipse',{cx:0,cy:ry,rx,ry},cp);
+  svgn('ellipse',{cx:0,cy:ry,rx,ry,fill:dark},grp);svgn('ellipse',{cx:0,cy:ry*1.55,rx:rx*.75,ry:ry*.62,fill:pink,'clip-path':'url(#mouth-clip)'},grp);
+  svgn('ellipse',{cx:0,cy:ry,rx,ry,fill:'none',stroke:OUTC,'stroke-width':lw},grp);}
+ else if(k==='o'){const ry=(.14+.3*op)*W,rx=.17*W;svgn('ellipse',{cx:0,cy:ry,rx,ry,fill:dark,stroke:OUTC,'stroke-width':lw},grp);}
+ else if(k==='teeth'){const h=(.14+.22*op)*W;svgn('rect',{x:-W*.4,y:0,width:W*.8,height:h,rx:h*.3,fill:'#ffffff',stroke:OUTC,'stroke-width':lw},grp);
+  svgn('line',{x1:-W*.4,y1:h/2,x2:W*.4,y2:h/2,stroke:OUTC,'stroke-width':lw*.7},grp);for(const f of [-.2,0,.2])svgn('line',{x1:W*f,y1:0,x2:W*f,y2:h,stroke:OUTC,'stroke-width':lw*.7},grp);}
+ else if(k==='tongue'){svgn('path',{d:`M${-W*.16},${W*.1} q0,${W*(.18+.2*op)} ${W*.16},${W*(.18+.2*op)} q${W*.16},0 ${W*.16},${-W*(.18+.2*op)} Z`,fill:pink,stroke:OUTC,'stroke-width':lw,'stroke-linejoin':'round'},grp);
+  line(`M${-W*.5},${-W*.04} Q0,${W*.5} ${W*.5},${-W*.04}`);}
+}function measureNeck(src){
  return new Promise((res,reject)=>{const im=new Image();im.onload=()=>{try{
   const N=256,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d');x.drawImage(im,0,0,N,N);
   const d=x.getImageData(0,0,N,N).data,op=(px,py)=>d[(py*N+px)*4+3]>40;
@@ -1414,7 +1529,7 @@ $('headLoad').onclick=autoHeads;
 // browser automatically. On a first visit the character file data/characters/haaland.json is used.
 // Add ?nosave to the address to run without touching the saved state (used for testing).
 const NOSAVE=location.search.includes('nosave'),SAVEKEY='fs_state_v2';
-function stateToSave(){return{v:2,backdrop:S.backdrop,body:S.body,look:S.look,head:{size:S.head.size,sink:S.head.sink,rot:S.head.rot,yaw:S.head.yaw,x:S.head.x,y:S.head.y,expression:S.head.expression},library:S.library,decals:S.decals,pose:S.pose,keys:S.keys,dur:S.dur,idle:S.idle,loop:S.loop,bodyLocked:S.bodyLocked}}
+function stateToSave(){return{v:2,backdrop:S.backdrop,body:S.body,look:S.look,head:{size:S.head.size,sink:S.head.sink,rot:S.head.rot,yaw:S.head.yaw,x:S.head.x,y:S.head.y,expression:S.head.expression},library:S.library,decals:S.decals,face:S.face,pose:S.pose,keys:S.keys,dur:S.dur,idle:S.idle,loop:S.loop,bodyLocked:S.bodyLocked}}
 let saveTimer;
 function scheduleSave(){
  if(NOSAVE)return;
@@ -1429,6 +1544,7 @@ function applyState(d){
  if(d.head){Object.assign(S.head,d.head);S.head.expressions??={};S.head.expression=validExpression(S.head.expression)}
  if(d.library)S.library=d.library;
  if(d.decals)S.decals=d.decals;
+ if(d.face)S.face=Object.assign({},FACE_DEF,d.face);
  if(d.pose)S.pose=clonePose(d.pose);
  if(d.keys)S.keys=d.keys;if(d.dur)S.dur=d.dur;
  if('idle' in d)S.idle=!!d.idle;
@@ -1444,20 +1560,22 @@ render=function(){drawFrame();scheduleSave()};
 S.keys=S.keys||[];S.dur=S.dur||3;S.t=0;S.playing=false;S.idle=false;S.loop=true;
 const ease=u=>u*u*(3-2*u),mix=(a,b,u)=>a+(b-a)*u,mix3=(a,b,u)=>[mix(a[0],b[0],u),mix(a[1],b[1],u),mix(a[2],b[2],u)];
 const angMix=(a,b,u)=>a+wrap(b-a)*u;
-function takeKey(t){const P=S.pose;return{t,hip:P.hip.slice(),type:P.type,rotFine:P.rotFine,yaw:P.yaw,limbs:JSON.parse(JSON.stringify(P.limbs)),poles:JSON.parse(JSON.stringify(P.poles)),ends:JSON.parse(JSON.stringify(P.ends||DEFAULT_POSE().ends)),side:Object.assign({hL:'auto',hR:'auto'},P.armSide||{}),hyaw:S.head.yaw||0,hrot:S.head.rot||0,expression:S.head.expression}}
+function takeKey(t){const P=S.pose;return{t,hip:P.hip.slice(),type:P.type,rotFine:P.rotFine,yaw:P.yaw,limbs:JSON.parse(JSON.stringify(P.limbs)),poles:JSON.parse(JSON.stringify(P.poles)),ends:JSON.parse(JSON.stringify(P.ends||DEFAULT_POSE().ends)),side:Object.assign({hL:'auto',hR:'auto'},P.armSide||{}),hyaw:S.head.yaw||0,hrot:S.head.rot||0,expression:S.head.expression,face:JSON.parse(JSON.stringify(S.face||FACE_DEF))}}
 function poseAt(t){
  const ks=[...S.keys].sort((a,b)=>a.t-b.t);if(!ks.length)return null;
  if(t<=ks[0].t)return ks[0];if(t>=ks[ks.length-1].t)return ks[ks.length-1];
  let i=0;while(ks[i+1].t<=t)i++;const A=ks[i],B=ks[i+1],raw=(t-A.t)/(B.t-A.t||1),u=A.lin?raw:ease(raw); // lin:true keys (densely sampled animations) are not eased again
  const L={},Q={},E={},z=DEFAULT_POSE().ends;for(const k of ['hL','hR','fL','fR']){L[k]=mix3(A.limbs[k],B.limbs[k],u);Q[k]=mix3(A.poles[k],B.poles[k],u);
   const ea=(A.ends||z)[k]||[0,0],eb=(B.ends||z)[k]||[0,0];E[k]=[mix(ea[0],eb[0],u),mix(ea[1],eb[1],u),mix(ea[2]||0,eb[2]||0,u)]}
- return{t,ends:E,side:u<.5?A.side:B.side,hip:[mix(A.hip[0],B.hip[0],u),mix(A.hip[1],B.hip[1],u)],type:u<.5?A.type:B.type,rotFine:angMix(A.rotFine,B.rotFine,u),yaw:angMix(A.yaw,B.yaw,u),limbs:L,poles:Q,hyaw:angMix(A.hyaw,B.hyaw,u),hrot:angMix(A.hrot,B.hrot,u),expression:A.expression};
+ return{t,ends:E,side:u<.5?A.side:B.side,hip:[mix(A.hip[0],B.hip[0],u),mix(A.hip[1],B.hip[1],u)],type:u<.5?A.type:B.type,rotFine:angMix(A.rotFine,B.rotFine,u),yaw:angMix(A.yaw,B.yaw,u),limbs:L,poles:Q,hyaw:angMix(A.hyaw,B.hyaw,u),hrot:angMix(A.hrot,B.hrot,u),expression:A.expression,face:mixFace(A.face,B.face,u)};
 }
+function mixFace(a,b,u){a=Object.assign({},FACE_DEF,a||{});b=Object.assign({},FACE_DEF,b||{});const o={};for(const k in FACE_DEF){o[k]=(typeof FACE_DEF[k]==='number')?mix(a[k],b[k],u):(u<.5?a[k]:b[k])}o.on=a.on;return o}
 function applyKey(k,t,animate=S.playing){
  const P=S.pose;P.hip=k.hip.slice();P.type=k.type;P.rotFine=k.rotFine;P.yaw=k.yaw;
  P.limbs=JSON.parse(JSON.stringify(k.limbs));P.poles=JSON.parse(JSON.stringify(k.poles));
  P.ends=JSON.parse(JSON.stringify(k.ends||DEFAULT_POSE().ends));P.armSide=Object.assign({hL:'auto',hR:'auto'},k.side||{});
  S.head.yaw=k.hyaw??0;S.head.rot=k.hrot??0;
+ if(k.face)S.face=Object.assign({},FACE_DEF,k.face);
  S.head.expression=validExpression(k.expression);
  if(S.idle&&animate){ // small constant life: breathing bob, tiny head sway
   const s=Math.sin(t*2*Math.PI*0.8);P.hip[1]+=s*2.2;S.head.rot=(k.hrot??0)+Math.sin(t*2*Math.PI*0.5)*1.6;

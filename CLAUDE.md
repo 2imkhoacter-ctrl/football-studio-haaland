@@ -1,4 +1,4 @@
-# CLAUDE.md — ngữ cảnh dự án Football Studio (đọc trước khi làm)
+﻿# CLAUDE.md — ngữ cảnh dự án Football Studio (đọc trước khi làm)
 
 ## Dự án là gì
 Chủ dự án là người làm YouTube người Việt. Mục tiêu dài hạn: kênh bóng đá "faceless" (phân tích chiến thuật, chủ đề nóng, tổng hợp tuần) bằng hoạt hình 2D cartoon tự dựng. `app/football-studio.html` là **xưởng dựng cầu thủ**: một file HTML + JS + SVG thuần, không thư viện, chạy offline. Nhân vật chính hiện tại: Haaland (đầu cartoon do GPT vẽ, 5 góc).
@@ -29,6 +29,9 @@ Làm được: tạo dáng bằng IK (kéo vòng vàng/xanh/trắng), xoay 360°
 ## Hoạt hình mẫu
 `animations/haaland-intro-10s.json` (vẫy chào, đi qua lại, nhảy) sinh bởi `tools/make_animation.py` (đọc file chốt, ghi file mới; sửa đường dẫn đầu script cho khớp máy). Tay buông: lệch ngang ±23, gần thẳng; đi bộ tay đung đưa nhẹ trước sau.
 
+## Khuôn mặt vector (thử nghiệm, mặc định TẮT)
+Ảnh đầu kiểu mới (data/heads/haaland_front_v2_vectorface.png): không lông mày, không miệng, khung mắt tô xanh #00FF00, nền trong suốt. Khi bật, app khử màu xanh (keyGreen), tự tìm 2 mắt, vẽ lòng trắng/con ngươi/mí SAU ảnh và lông mày/miệng TRƯỚC ảnh (drawFaceBack/drawFaceFront). Trạng thái ở S.face (cũng nằm trong keyframe để chớp mắt/đổi biểu cảm). Hiện chỉ có góc chính diện; 4 góc còn lại chưa có ảnh kiểu mới.
+
 ## Chạy và kiểm tra
 Chạy máy chủ tĩnh ở gốc kho, mở `app/football-studio.html?nosave`. Biến toàn cục để thử: `window.__S` (state), `window.__render`. Để kiểm tra bằng mắt cần trình duyệt; nếu môi trường không có thì nói rõ là **chưa xem bằng mắt**.
 
@@ -41,3 +44,4 @@ Chạy máy chủ tĩnh ở gốc kho, mở `app/football-studio.html?nosave`. B
 
 ## Cách làm việc khi chủ dự án gửi ảnh lỗi
 Dựng lại đúng tư thế/góc quay (nạp `data/characters/haaland-final.json`, đặt yaw), phóng to vùng khoanh, tìm nguyên nhân gốc, sửa tổng quát, kiểm tra lại, báo ngắn: đã sửa gì, đã thử ở đâu, chưa thử gì.
+

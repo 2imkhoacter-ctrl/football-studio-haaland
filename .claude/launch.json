@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "userdl",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["-m", "http.server", "8770", "--bind", "127.0.0.1", "--directory", "D:\\Download"],
+      "port": 8770
+    }
+  ]
+}
