@@ -14,6 +14,7 @@ const H = R('data/characters/haaland-final.json'), V = R('data/characters/vini-f
 const FPS = 24, CUT = 5.95, DUR = 9.15, N = Math.round(DUR * FPS), o = { FPS, N };
 const THETA_A = process.env.VIEW_THETA != null ? +process.env.VIEW_THETA : 0;   // chỉ để thử góc (xem tay sau lưng)
 
+const VINI_FACE = process.env.VINI_FACE != null ? +process.env.VINI_FACE : 225;   // 180 = nhìn thẳng vào máy; 135/225 = nghiêng 3/4 (225: mõm chỉa sang trái)
 const HP = [0, 40], VP = [0, 10];             // chỗ đứng trên sân (mét). Hai người cách xa nhau để cảnh nào cũng không thấy người kia.
 const ease = (t, a, b) => S(clamp((t - a) / (b - a), 0, 1));
 const pulse = (t, t0, d) => (t < t0 || t > t0 + d) ? 0 : Math.pow(1 - (t - t0) / d, 2);
@@ -87,7 +88,7 @@ const ARMS = {
 const T_LAND = CUT + 0.46, T_PUMP = CUT + 1.7;
 const vini = {
   pos: [[0, VP[0], VP[1]], [15, VP[0], VP[1]]],
-  head: [[0, 0], [CUT, 0], [CUT + 0.34, 180], [15, 180]],
+  head: [[0, 0], [CUT, 0], [CUT + 0.34, VINI_FACE], [15, VINI_FACE]],   // đáp xuống quay NGHIÊNG 3/4 để thấy môi chu nhô ra
   stance: 2.0, runSpeed: 1.6, blink: 1.1, seed: 7,
   ges: [], faces: [{ t0: 0, t1: T_LAND, e: 'grin' }, { t0: T_LAND, t1: 15, e: 'scream' }],
   jumps: [[CUT - 0.1, 95, 0.56]],
