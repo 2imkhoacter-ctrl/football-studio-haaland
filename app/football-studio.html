@@ -1394,21 +1394,24 @@ async function ensureKeyed(metaKey,src){
  const meta=S.headMeta[metaKey];if(!meta)return;meta.keyTried=true;
  try{
   const r=await keyGreen(src);
-  if(r&&r.eyes.length>=1){meta.keyed=r.url;meta.eyes=r.eyes}else{meta.eyes=[]}
+  if(r&&r.eyes.length>=1){meta.keyed=r.url;meta.eyes=r.eyes;meta.holeMask=r.holeMask;meta.silMask=r.silMask}else{meta.eyes=[]}
  }catch(e){meta.eyes=[]}
  render();
 }
 function keyGreen(src){
  return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{try{
   const N=Math.min(1024,im.naturalWidth||1024),c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0,N,N);
-  const img=x.getImageData(0,0,N,N),d=img.data,mask=new Uint8Array(N*N);
+  const img=x.getImageData(0,0,N,N),d=img.data,mask=new Uint8Array(N*N),hole=new Uint8Array(N*N),sil=new Uint8Array(N*N);
   for(let i=0;i<N*N;i++){
-   const o=i*4,r=d[o],g=d[o+1],b=d[o+2],gd=g-Math.max(r,b);
+   const o=i*4,r=d[o],g=d[o+1],b=d[o+2],gd=g-Math.max(r,b),a0=d[o+3];if(a0>40)sil[i]=255;
    if(gd>120){d[o+3]=0;mask[i]=1}
    else if(gd>40&&d[o+3]>0){d[o+3]=Math.round(d[o+3]*(120-gd)/80);if(gd>60)mask[i]=0}
    if(gd>0&&d[o+3]>0)d[o+1]=Math.min(g,Math.max(r,b)+8);
+   if(a0>200)hole[i]=255-d[o+3];
   }
   x.putImageData(img,0,0);
+  const mk=arr=>{const m=document.createElement('canvas');m.width=m.height=N;const mx=m.getContext('2d'),id=mx.createImageData(N,N);for(let i=0;i<N*N;i++){id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=arr[i];id.data[i*4+3]=255}mx.putImageData(id,0,0);return m.toDataURL('image/png')};
+  const holeMask=mk(hole),silMask=mk(sil);
   // find the two biggest transparent-by-key blobs (the eye holes)
   const lab=new Int32Array(N*N),blobs=[];let id=0;const st=new Int32Array(N*N);
   for(let s=0;s<N*N;s++){ if(!mask[s]||lab[s])continue; id++;let sp=0,a=0,x0=N,y0=N,x1=0,y1=0,sx=0,sy=0;st[sp++]=s;lab[s]=id;
@@ -1417,11 +1420,18 @@ function keyGreen(src){
    blobs.push({a,x0,y0,x1,y1,cx:sx/a,cy:sy/a}); }
   blobs.sort((p,q)=>q.a-p.a);const big=blobs.slice(0,2).filter(b=>b.a>N*N*.0008).sort((p,q)=>p.cx-q.cx);
   const eyes=big.map(b=>({x0:b.x0/N,y0:b.y0/N,x1:(b.x1+1)/N,y1:(b.y1+1)/N,cx:b.cx/N,cy:b.cy/N,w:(b.x1+1-b.x0)/N,h:(b.y1+1-b.y0)/N}));
-  res({url:c.toDataURL('image/png'),eyes});
+  res({url:c.toDataURL('image/png'),eyes,holeMask,silMask});
  }catch(err){rej(err)}};im.onerror=()=>rej(Error('anh loi'));im.src=src});
+}
+function maskedGroup(g,url,ix,iy,size,id){
+ if(!url)return g;
+ const m=svgn('mask',{id,maskUnits:'userSpaceOnUse',x:ix,y:iy,width:size,height:size},g);
+ const im=svgn('image',{x:ix,y:iy,width:size,height:size,preserveAspectRatio:'none'},m);im.setAttribute('href',url);im.setAttributeNS('http://www.w3.org/1999/xlink','href',url);
+ return svgn('g',{mask:'url(#'+id+')'},g);
 }
 const svgn=(tag,at,parent)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in at)e.setAttribute(k,at[k]);if(parent)parent.appendChild(e);return e};
 function drawFaceBack(g,meta,ix,iy,size,K,view){
+ g=maskedGroup(g,meta.holeMask,ix,iy,size,'face-hole-mask'); // eyes only show inside the eye holes, never outside the head
  const F=Object.assign({},FACE_DEF,S.face),sk=meta.skin||K.skin,eyes=meta.eyes;
  eyes.map((e,i)=>[e,eyes.length===1?Math.max(F.lidL,F.lidR):(i?F.lidR:F.lidL)]).forEach(([e,lid])=>{
   const cx=ix+e.cx*size,cy=iy+e.cy*size,w=e.w*size,h=e.h*size;
@@ -1435,6 +1445,7 @@ function drawFaceBack(g,meta,ix,iy,size,K,view){
  });
 }
 function drawFaceFront(g,meta,ix,iy,size,K,view){
+ g=maskedGroup(g,meta.silMask,ix,iy,size,'face-sil-mask'); // brows and mouth never leave the head outline
  const F=Object.assign({},FACE_DEF,S.face),eyes=meta.eyes,lw=size*.0068,hairCol=F.browColor||K.hair||'#c9a227';
  const kind=BROWS[F.browKind]||BROWS.normal,eh=Math.max(...eyes.map(e=>e.h))*size;
  eyes.map((e,i)=>{const j=eyes.length===1?0:i;return [e,kind[j],j?F.browHR:F.browHL]}).forEach(([e,[ho,ang],hs])=>{
@@ -1446,9 +1457,9 @@ function drawFaceFront(g,meta,ix,iy,size,K,view){
  // mouth
  const one=eyes.length===1,e0=eyes[0],e1=eyes[eyes.length-1],sep=one?e0.w*2.0:e1.cx-e0.cx;
  // turned heads: the mouth sits towards the nose side (the picture faces right); profile: one eye, mouth at the front edge
- const shift=one?e0.w*.3:(view==='front'||view==='back'?0:sep*.28);
+ const shift=one?e0.w*.3:(view==='front'||view==='back'?0:sep*.14);
  const mx=ix+((one?e0.cx:(e0.cx+e1.cx)/2)+shift)*size+F.mouthDx/100*sep*size*.5,my=iy+(((e0.cy+e1.cy)/2)+(one?.9:1.05)*sep)*size+F.mouthDy/100*sep*size*.5;
- const W=sep*size*(one?.33:.95)*F.mouthScale/100,op=F.mouthOpen/100,k=F.mouthKind,OUTC='#101418',dark='#3d0e12',pink='#e0556a';
+ const W=sep*size*(one?.33:(view==='front'?.95:.78))*F.mouthScale/100,op=F.mouthOpen/100,k=F.mouthKind,OUTC='#101418',dark='#3d0e12',pink='#e0556a';
  const grp=svgn('g',{transform:`translate(${mx},${my})`},g);
  const line=(d,fill)=>svgn('path',{d,fill:fill||'none',stroke:OUTC,'stroke-width':lw,'stroke-linecap':'round','stroke-linejoin':'round'},grp);
  if(k==='closed'){line(`M${-W*.5},${W*.02} Q${-W*.05},${W*.09} ${W*.5},${-W*.03}`);line(`M${W*.5},${-W*.03} q${W*.05},${-W*.01} ${W*.075},${-W*.075}`)}
