@@ -27,6 +27,6 @@ const fps = +fpsArg, app = 'file://' + path.resolve(__dirname, '../app/football-
   await b.close();
   if (errs.length) console.log('loi trang:', errs.slice(0, 3));
   if (only) { console.log('Da chup', times.length, 'khung ->', fr); return; }
-  execFileSync('ffmpeg', ['-y', '-framerate', String(fps), '-i', path.join(fr, '%05d.png'), '-c:v', 'libx264', '-crf', '22', '-preset', 'slow', '-pix_fmt', 'yuv420p', path.join(out, 'phim.mp4')], { stdio: 'ignore' });
+  execFileSync('ffmpeg', ['-y', '-framerate', String(fps), '-i', path.join(fr, '%05d.png'), '-vf', 'scale=1080:1920', '-c:v', 'libx264', '-crf', '22', '-preset', 'medium', '-pix_fmt', 'yuv420p', path.join(out, 'phim.mp4')], { stdio: 'inherit' });
   console.log('Xong', times.length, 'khung ->', path.join(out, 'phim.mp4'));
 })();
