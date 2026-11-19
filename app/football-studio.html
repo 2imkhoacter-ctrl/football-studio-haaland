@@ -1118,7 +1118,7 @@ function render(target=fig,preview=true){
    hg.appendChild(flg);
    for(const r of regions){
     const p=r.p,cxs=flip?2*(ix+sz/2)-X(r.cx):X(r.cx),cys=Y(r.cy);
-    const mv=el('g',{transform:`translate(${cxs+p.dx*sz/100},${cys+p.dy*sz/100}) rotate(${p.rot}) scale(${(p.flip?-1:1)*p.sx/100},${p.sy/100}) translate(${-cxs},${-cys})`},hg);
+    const mv=el('g',{transform:`translate(${cxs+p.dx*sz/100*hc},${cys+p.dy*sz/100}) rotate(${p.rot}) scale(${(p.flip?-1:1)*p.sx/100},${p.sy/100}) translate(${-cxs},${-cys})`},hg);
     const cid='hp_clip_'+r.name;
     el('ellipse',{cx:X(r.cx),cy:Y(r.cy),rx:r.rx*sz,ry:r.ry*sz},el('clipPath',{id:cid},defs));
     paint(el('g',{transform:flipT,'clip-path':'url(#'+cid+')'},mv),false);
