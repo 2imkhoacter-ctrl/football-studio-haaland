@@ -45,7 +45,7 @@ const Studio = ({ anim = 'anim.json', castCount = 0 }) => {
 
   return (
     <iframe ref={ref} src={staticFile('studio.html') + '?nosave'} width={600} height={720} title="studio"
-      style={{ position: 'absolute', left: -60, top: 480, border: 0, transformOrigin: '0 0', transform: `scale(${SCALE})`, background: 'transparent', WebkitMaskImage: 'linear-gradient(180deg,transparent 0,#000 200px)', maskImage: 'linear-gradient(180deg,transparent 0,#000 200px)' }} />
+      style={{ position: 'absolute', left: -60, top: 480, border: 0, transformOrigin: '0 0', transform: `scale(${SCALE})`, background: 'transparent', WebkitMaskImage: 'linear-gradient(180deg,transparent 0,#000 24px)', maskImage: 'linear-gradient(180deg,transparent 0,#000 24px)' }} />
   );
 };
 
@@ -108,5 +108,16 @@ const FilmScene = () => {
     </AbsoluteFill>
   );
 };
-const Root = () => (<><Composition id="FootballPOC" component={Scene} durationInFrames={300} fps={30} width={1080} height={1920} /><Composition id="Film" component={FilmScene} durationInFrames={1440} fps={24} width={1080} height={1920} /></>);
+
+// Phim câm: không chữ, chỉ nền khán đài + tool vẽ mọi thứ.
+const GoalScene = () => (
+  <AbsoluteFill style={{ background: 'linear-gradient(180deg,#14275c 0%,#27458a 14%,#4a74b9 32%,#6f95cf 46%,#2f7d34 74%,#2f7d34 100%)', overflow: 'hidden' }}>
+    <div style={{ position: 'absolute', left: -40, right: -40, top: 0, height: 760, filter: 'blur(16px)', opacity: 0.95,
+      backgroundImage: 'radial-gradient(circle at 12% 30%,#ffffff88 0 9px,transparent 10px),radial-gradient(circle at 48% 62%,#ffe2b088 0 8px,transparent 9px),radial-gradient(circle at 82% 22%,#ffffff77 0 10px,transparent 11px),radial-gradient(circle at 30% 85%,#cfe0ff88 0 7px,transparent 8px),radial-gradient(circle at 70% 78%,#ffffff66 0 9px,transparent 10px)',
+      backgroundSize: '110px 90px,150px 110px,130px 100px,95px 80px,140px 105px',
+      WebkitMaskImage: 'linear-gradient(180deg,transparent 0,#000 18%,#000 80%,transparent 100%)', maskImage: 'linear-gradient(180deg,transparent 0,#000 18%,#000 80%,transparent 100%)' }} />
+    <Studio anim="goal.json" castCount={5} />
+  </AbsoluteFill>
+);
+const Root = () => (<><Composition id="FootballPOC" component={Scene} durationInFrames={300} fps={30} width={1080} height={1920} /><Composition id="Goal" component={GoalScene} durationInFrames={432} fps={24} width={1080} height={1920} /><Composition id="Film" component={FilmScene} durationInFrames={1440} fps={24} width={1080} height={1920} /></>);
 registerRoot(Root);

@@ -693,6 +693,15 @@ function renderOne(target=fig,preview=true){
  const sol={fL:solve('fL'),fR:solve('fR'),hL:solve('hL'),hR:solve('hR')};
  drawProps(target,sol,'back');
  drawCast(target,'behind');
+ {const scn=S.props&&S.props.scene;
+  if(scn&&scn.show&&scn.style==='night360'){
+   const kz=100/Math.max(20,scn.size||100),blur=Math.max(0,scn.dof||0)/10;
+   if(kz!==1||blur>0){
+    const grp=svgn('g',{transform:`translate(300 645) scale(${kz}) translate(-300 -645)`},target);
+    if(blur>0){const id='dofBlur'+(renderOne.dof=(renderOne.dof||0)+1);const fl=svgn('filter',{id,x:'-40%',y:'-40%',width:'180%',height:'180%'},grp);svgn('feGaussianBlur',{stdDeviation:blur},fl);const inner=svgn('g',{filter:'url(#'+id+')'},grp);target=inner}
+    else target=grp;
+   }
+  }}
  const joints={hL:sol.hL.E,hR:sol.hR.E,fL:sol.fL.E,fR:sol.fR.E,jhL:sol.hL.J,jhR:sol.hR.J,jfL:sol.fL.J,jfR:sol.fR.J};
  const depth=s=>(s.A.z+s.J.z*2+s.E.z)/4;
 
@@ -1380,8 +1389,8 @@ $('holeAuto').onclick=()=>{S.body.holeAuto=S.body.holeAuto?0:1;syncHoleAuto();re
 // A prop is a drawn object with its own position / size / spin / layer. It is either FREE (stage coordinates) or ATTACHED to a hand / foot
 // (then x,y are an offset from that joint, so the ball follows the kicking foot). Everything is part of the keyframes.
 const PROP_DEF={
- scene:{show:true,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,tilt:10,style:'night360'},
- ball:{show:false,layer:'front',attach:'free',x:430,y:612,size:100,rot:0,style:'png'},
+ scene:{show:true,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,tilt:10,style:'night360',dof:0},
+ ball:{show:false,layer:'front',attach:'free',x:430,y:612,size:100,rot:0,style:'png',h:0,fire:0,vx:0,vz:0},
  trophy:{show:false,layer:'front',attach:'free',x:150,y:540,size:100,rot:0,style:'png'},
  goal:{show:false,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,style:'draw'}
 };
@@ -1513,7 +1522,7 @@ function nightCamera(scene) {
 }
 function pitchBallPose(ball,scene){
  const view=nightCamera(scene),radius=26*ball.size/100*view.distance/view.focal;
- const point=view.camera([ball.x,radius,ball.y]);
+ const point=view.camera([ball.x,radius+(ball.h||0),ball.y]);
  if(point[2]<.65)return null;
  return [...view.project(point),ball.size/100*view.distance/point[2],point[2]<=view.distance?'front':'back'];
 }
@@ -1618,6 +1627,22 @@ function drawNightStadium(parent,scene){
  }
 }
 
+// Hiệu ứng bóng bốc lửa: đuôi lửa kéo ngược hướng bay (vx,vz = vận tốc mét/giây trên sân) + tia lửa tóe ra.
+function drawBallFire(target,P,scene,px,py,scale){
+ const view=nightCamera(scene),r=26*P.size/100*view.distance/view.focal,dt=.05;
+ const a=view.project(view.camera([P.x,r+(P.h||0),P.y])),b=view.project(view.camera([P.x-(P.vx||0)*dt,r+(P.h||0),P.y-(P.vz||0)*dt]));
+ let dx=b[0]-a[0],dy=b[1]-a[1];const m=Math.hypot(dx,dy);if(m<.01){dx=1;dy=0}else{dx/=m;dy/=m}
+ const k=P.fire/100,r0=34*scale,len=(150+260*k)*scale,seed=Math.round(P.x*37+P.y*53+(P.h||0)*91);
+ const rnd=n=>{const x=Math.sin((seed+n)*12.9898)*43758.5453;return x-Math.floor(x)};
+ const g=svgn('g',{transform:`translate(${px},${py}) rotate(${Math.atan2(dy,dx)*180/Math.PI})`,style:'pointer-events:none'},target);
+ const flame=(L,w,fill,op,j)=>svgn('path',{d:`M0 ${-w} Q${L*.45} ${-w*(1.25+j*.3)} ${L} ${j*w*.3} Q${L*.5} ${w*(1.25-j*.3)} 0 ${w}Z`,fill,'fill-opacity':op},g);
+ flame(len,r0*1.05,'#ff5a00',.82,rnd(1)-.5);flame(len*.78,r0*.8,'#ff9a10',.9,rnd(2)-.5);flame(len*.52,r0*.5,'#ffe27a',.95,rnd(3)-.5);flame(len*.28,r0*.28,'#ffffff',.95,0);
+ for(let i=0;i<16;i++){
+  const d=len*(.12+rnd(10+i)*1.05),o=(rnd(40+i)-.5)*r0*(2.2+d/len*3),sz=(1.6+rnd(70+i)*4.2)*scale*2.2;
+  svgn('circle',{cx:d,cy:o,r:sz,fill:['#ffd84a','#ff9a10','#ff5a00','#fff2b0'][i%4],'fill-opacity':.9-d/len*.45},g);
+  if(i%3===0)svgn('path',{d:`M${d} ${o}l${sz*5} ${(rnd(90+i)-.5)*sz*3}`,stroke:'#ffd84a','stroke-width':sz*.55,'stroke-linecap':'round','stroke-opacity':.8},g);
+ }
+}
 function drawProps(target,sol,layer){
  const scene=S.props.scene;
  if(layer==='back'&&scene?.show&&scene.style==='night360')drawNightStadium(svgn('g',{'data-night-stadium':'',style:'pointer-events:none'},target),scene);
@@ -1628,6 +1653,7 @@ function drawProps(target,sol,layer){
    const position=pitchBallPose(P,scene);
    if(!position||position[3]!==layer)continue;
    [px,py,scale]=position;
+   if(P.fire>0)drawBallFire(target,P,scene,px,py,scale);
   }else if(P.attach!=='free'&&sol[P.attach]){const E=sol[P.attach].E;px=E[0]+P.x;py=E[1]+P.y}
   const g=svgn('g',{transform:`translate(${px},${py}) rotate(${P.rot}) scale(${scale})`},target);if(id==='scene')g.setAttribute('data-night-stadium','');PROP_DRAW[id](g,P)}
 }
@@ -2260,7 +2286,7 @@ function drawCast(target,phase){
  inCast=true;const OW0=OW,P0=S.props,sc=nightScene();
  const cam=sc?nightCamera(sc):null,camDeg=cam?cam.yaw*180/Math.PI:0,refDepth=cam?cam.distance:0,ref=S.pose.hip[1];
  try{
-  if(sc&&phase==='behind')el('ellipse',{cx:S.pose.hip[0],cy:645,rx:58,ry:9,fill:'#000','fill-opacity':.28},target); // bóng người đang chỉnh
+  if(sc&&phase==='behind')el('ellipse',{cx:S.pose.hip[0],cy:645,rx:58*(100/Math.max(20,sc.size||100)),ry:9*(100/Math.max(20,sc.size||100)),fill:'#000','fill-opacity':.28},target); // bóng người đang chỉnh
   const items=[];
   S.cast.forEach((a,i)=>{
    swapIn(a);S.props=hiddenProps(P0);let o;
@@ -2278,7 +2304,7 @@ function drawCast(target,phase){
     castInfo();
     let holder=target;
     if(cam){
-     const [sx,sy]=cam.project(o.pt),s=refDepth/o.pt[2];
+     const [sx,sy]=cam.project(o.pt),s=refDepth/o.pt[2]*(100/Math.max(20,sc.size||100));
      holder=el('g',{transform:`translate(${sx},${sy}) scale(${s}) translate(-300,-645)`},target);
      el('ellipse',{cx:300,cy:645,rx:58,ry:9,fill:'#000','fill-opacity':.28},holder);
      S.pose.hip[0]=300;S.pose.yaw=wrap(camDeg-o.inf.wh);
