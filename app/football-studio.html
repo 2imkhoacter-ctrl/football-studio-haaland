@@ -137,7 +137,7 @@ input[type=file]{font-size:12px;max-width:100%}
   <div class="box"><h3>CHỈNH HÌNH ĐẦU</h3>
    <label><input id="vectorHead" type="checkbox"> Dùng đầu chỉnh bằng thông số</label>
    <div class="row"><button id="autoHeadShape" type="button">Tự căn khung mặt</button></div>
-   <div class="row"><button id="viniCaricature" type="button">Vini · cau mày</button><button id="longCaricature" type="button">Mặt dài · mũi nổi</button></div>
+   <div class="row"><button id="viniCaricature" type="button">Vini · cau mày</button><button id="viniHeavy" type="button">Vini · hàm nặng</button><button id="longCaricature" type="button">Mặt dài · mũi nổi</button></div>
    <div class="sub" id="autoHeadStatus" aria-live="polite"></div>
    <div id="headShapeControls" hidden>
     <div class="row"><label for="hs_nose">Dáng mũi</label><select id="hs_nose"><option value="haaland">Haaland</option><option value="round">Tròn</option><option value="button">Nhỏ hếch</option><option value="straight">Thẳng</option><option value="broad">Bè ngang</option><option value="hook">Khoằm</option><option value="prominent">Dài, nhô</option></select></div>
@@ -2743,6 +2743,15 @@ async function loadViniHeads(head){
    extremeEyes:9};
   Object.assign(S.face,{on:true,lookX:29,lookY:4,pupil:90,browKind:'angry',
    browThick:128,mouthKind:'smirk',mouthScale:106});
+  syncAll();render();
+ };
+ $('viniHeavy').onclick=async()=>{
+  if(!S.head.bundledVini||slug(S.look.name)!=='vinijr')await $('viniPreset').onclick();
+  if(!S.head.bundledVini||slug(S.look.name)!=='vinijr')return;
+  S.head.shape={...HEAD_SHAPE,enabled:true,base:'vini-photo',width:122,jaw:150,cheek:125,chin:6,eyeHeight:75,eyeWidth:92,eyeGap:92,
+   parts:{browL:{on:true,dy:14,rot:6,sx:115,sy:120},browR:{on:true,dy:14,rot:-6,sx:115,sy:120},mouth:{on:true,sx:85,sy:90,dy:-4}}};
+  S.head.size=235;
+  Object.assign(S.face,{on:true,lookX:29,lookY:4,pupil:75,browKind:'angry',browThick:165,mouthKind:'closed',mouthScale:106});
   syncAll();render();
  };
  $('longCaricature').onclick=()=>{
