@@ -1789,7 +1789,7 @@ $('pkAttach').onchange=e=>{
 $('pkReset').onclick=()=>{S.props[S.propSel]=Object.assign({},PROP_DEF[S.propSel]);syncProps();render()};// ---- vector face UI ----
 const FACE_UI=[['Nhìn ngang','lookX',-100,100],['Nhìn dọc','lookY',-100,100],['Cỡ con ngươi (%)','pupil',50,160],['Mí mắt trái (0 mở - 100 nhắm)','lidL',0,100],['Mí mắt phải','lidR',0,100],['Lông mày: độ cao trái','browHL',-100,100],['Lông mày: độ cao phải','browHR',-100,100],['Lông mày: độ dày (%)','browThick',50,200],['Miệng: độ mở','mouthOpen',0,100],['Miệng: dời ngang','mouthDx',-100,100],['Miệng: dời dọc','mouthDy',-100,100],['Miệng: to nhỏ (%)','mouthScale',50,200]];
 const BROW_NAMES=[['normal','Bình thường'],['angry','Giận'],['sad','Buồn / lo'],['surprised','Ngạc nhiên'],['skeptic','Nghi ngờ'],['happy','Vui'],['focus','Nhíu / tập trung'],['smug','Thách thức']];
-const MOUTH_NAMES=[['closed','Ngậm'],['smile','Cười mỉm'],['smirk','Nhếch mép'],['sad','Buồn'],['grin','Cười toe (lộ răng)'],['a','Há "a"'],['o','Tròn "o"'],['teeth','Nghiến răng'],['tongue','Le lưỡi']];
+const MOUTH_NAMES=[['closed','Ngậm'],['smile','Cười mỉm'],['smirk','Nhếch mép'],['sad','Buồn'],['grin','Cười toe (lộ răng)'],['a','Há "a"'],['o','Tròn "o"'],['teeth','Nghiến răng'],['tongue','Le lưỡi'],['siu','Chu môi "siuuu"']];
 BROW_NAMES.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;$('fcBrow').appendChild(o)});
 MOUTH_NAMES.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;$('fcMouth').appendChild(o)});
 FACE_UI.forEach(([label,key,mn,mx])=>{const r=document.createElement('div');r.className='row';r.innerHTML=`<label>${label} <b id="fv_${key}">0</b></label><input type="range" id="fs_${key}" min="${mn}" max="${mx}" value="0">`;$('fcSliders').appendChild(r);
@@ -2183,6 +2183,7 @@ function drawSeparateEyes(g,meta,ix,iy,size,K,view,turn,amount){
  }
 }
 function drawFaceFront(g,meta,ix,iy,size,K,view){
+ const outerG=g; // kiểu miệng 'siu' nhô ra ngoài viền đầu nên vẽ ngoài lớp cắt
  g=maskedGroup(g,meta.silMask,ix,iy,size,'face-sil-mask'); // brows and mouth never leave the head outline
  const F=Object.assign({},FACE_DEF,S.face),eyes=meta.eyes,lw=size*.0068,hairCol=F.browColor||K.hair||'#c9a227';
  const kind=BROWS[F.browKind]||BROWS.normal,eh=Math.max(...eyes.map(e=>e.h))*size;
@@ -2199,7 +2200,7 @@ function drawFaceFront(g,meta,ix,iy,size,K,view){
  const anchor=meta.mouthAnchor||[(one?e0.cx:(e0.cx+e1.cx)/2)+shift,((e0.cy+e1.cy)/2)+(one?.9:1.05)*sep];
  const mx=ix+anchor[0]*size+F.mouthDx/100*sep*size*.5,my=iy+anchor[1]*size+F.mouthDy/100*sep*size*.5;
  const W=sep*size*(one?.33:(view==='front'?.95:.78))*F.mouthScale/100,op=F.mouthOpen/100,k=F.mouthKind,OUTC='#101418',dark='#3d0e12',pink='#e0556a';
- const grp=svgn('g',{transform:`translate(${mx},${my})`},g);
+ const grp=svgn('g',{transform:`translate(${mx},${my})`},k==='siu'?outerG:g);
  const line=(d,fill)=>svgn('path',{d,fill:fill||'none',stroke:OUTC,'stroke-width':lw,'stroke-linecap':'round','stroke-linejoin':'round'},grp);
  if(k==='closed'){line(`M${-W*.5},${W*.02} Q${-W*.05},${W*.09} ${W*.5},${-W*.03}`);line(`M${W*.5},${-W*.03} q${W*.05},${-W*.01} ${W*.075},${-W*.075}`)}
  else if(k==='smile')line(`M${-W*.5},${-W*.04} Q0,${W*.5} ${W*.5},${-W*.04}`);
@@ -2218,6 +2219,14 @@ function drawFaceFront(g,meta,ix,iy,size,K,view){
   svgn('line',{x1:-W*.4,y1:h/2,x2:W*.4,y2:h/2,stroke:OUTC,'stroke-width':lw*.7},grp);for(const f of [-.2,0,.2])svgn('line',{x1:W*f,y1:0,x2:W*f,y2:h,stroke:OUTC,'stroke-width':lw*.7},grp);}
  else if(k==='tongue'){svgn('path',{d:`M${-W*.16},${W*.1} q0,${W*(.18+.2*op)} ${W*.16},${W*(.18+.2*op)} q${W*.16},0 ${W*.16},${-W*(.18+.2*op)} Z`,fill:pink,stroke:OUTC,'stroke-width':lw,'stroke-linejoin':'round'},grp);
   line(`M${-W*.5},${-W*.04} Q0,${W*.5} ${W*.5},${-W*.04}`);}
+ else if(k==='siu'){ // môi CHU ra trước như "uuu": nhìn thẳng là khối tròn có lỗ nhỏ; nhìn nghiêng thì nhô ra như mõm (hình quay sang phải, app tự lật khi quay trái)
+  const sk=meta.skin||K.skin,bulge=view==='front'?0:(one?.6:.36)*W,rx=.38*W+bulge/2,ry=(.26+.07*op)*W,cx=bulge/2,cy=W*.12;
+  svgn('ellipse',{cx,cy,rx,ry,fill:sk,stroke:OUTC,'stroke-width':lw*1.25},grp);
+  svgn('ellipse',{cx,cy,rx:rx*.94,ry:ry*.94,fill:pink,'fill-opacity':.3},grp);
+  svgn('path',{d:`M${cx-rx*.62},${cy-ry*.12} Q${cx},${cy-ry*.62} ${cx+rx*.62},${cy-ry*.12}`,fill:'none',stroke:OUTC,'stroke-width':lw*.8,'stroke-linecap':'round','stroke-opacity':.55},grp);
+  const ox=cx+(bulge?bulge*.42:0),orx=(bulge?.085:.14)*W,ory=(.09+.2*op)*W;
+  svgn('ellipse',{cx:ox,cy:cy+ry*.05,rx:orx,ry:ory,fill:dark,stroke:OUTC,'stroke-width':lw},grp);
+ }
 }function measureNeck(src){
  return new Promise((res,reject)=>{const im=new Image();im.onload=()=>{try{
   const N=256,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d');x.drawImage(im,0,0,N,N);

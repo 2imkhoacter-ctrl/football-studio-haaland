@@ -100,8 +100,8 @@ const vini = {
     }
     key.hyaw = 0;
     if (t >= T_LAND) {
-      key.face.lidL = 0; key.face.lidR = 0; key.face.browKind = 'surprised'; key.face.mouthKind = 'a';
-      key.face.mouthOpen = r2(t > T_PUMP ? 96 : 84); key.face.lookY = r2(-30 * wPump);
+      key.face.lidL = 18; key.face.lidR = 18; key.face.browKind = 'angry'; key.face.mouthKind = 'siu';   // mặt SIUUU: mày dữ, mắt nheo, môi CHU ra
+      key.face.mouthOpen = r2(t > T_PUMP ? 80 : 50); key.face.lookY = r2(-30 * wPump);
     }
     key.hrot = r2(5 * wPump);
     key.rotFine = r2(-3 * wOpen - 3 * wPump);
