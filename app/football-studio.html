@@ -1118,8 +1118,14 @@ function syncEnds(){
 function setEnd(i,v){if(!S.pose.ends)S.pose.ends=DEFAULT_POSE().ends;S.pose.ends[S.endSel][i]=+v;syncEnds();render()}
 $('endBend').oninput=e=>setEnd(0,e.target.value);$('endTwist').oninput=e=>setEnd(1,e.target.value);$('endRoll').oninput=e=>setEnd(2,e.target.value);
 $('endReset').onclick=()=>{if(!S.pose.ends)S.pose.ends=DEFAULT_POSE().ends;S.pose.ends[S.endSel]=[0,0,0];syncEnds();render()};
-{const rows=$('sideRows');[['hL','Tay trái'],['hR','Tay phải']].forEach(([k,n])=>{const r=document.createElement('div');r.className='grid4';r.style.marginBottom='6px';const lb=document.createElement('span');lb.textContent=n;lb.style.alignSelf='center';r.appendChild(lb);[['auto','Tự động'],['front','Trước ngực'],['back','Sau lưng']].forEach(([v,l])=>{const b=document.createElement('button');b.textContent=l;b.dataset.v=v;b.onclick=()=>{if(!S.pose.armSide)S.pose.armSide={hL:'auto',hR:'auto'};S.pose.armSide[k]=v;syncSide();render()};r.appendChild(b)});r.dataset.k=k;rows.appendChild(r)})}
-function syncSide(){const as=S.pose.armSide||{};document.querySelectorAll('#sideRows .grid4').forEach(r=>[...r.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.v===(as[r.dataset.k]||'auto'))))}
+{const rows=$('sideRows');[['hL','Tay trái'],['hR','Tay phải']].forEach(([k,n])=>{const r=document.createElement('div');r.className='grid4';r.style.marginBottom='6px';const lb=document.createElement('span');lb.textContent=n;lb.style.alignSelf='center';r.appendChild(lb);[['auto','Tự động'],['front','Trước ngực'],['back','Sau lưng']].forEach(([v,l])=>{const b=document.createElement('button');b.textContent=l;b.dataset.v=v;b.onclick=()=>{if(!S.pose.armSide)S.pose.armSide={hL:'auto',hR:'auto'};S.pose.armSide[k]=v;armDepthFor(k,v);syncSide();render()};r.appendChild(b)});r.dataset.k=k;rows.appendChild(r)})}
+// "Sau lưng" / "Trước ngực" also move the HAND in depth: behind the back / in front of the chest (front-view dragging can't set depth).
+function armDepthFor(k,v){
+ const B=S.body,L=S.pose.limbs[k];if(!L)return;
+ const d=Math.max(B.chest*B.depthK,B.waist*B.depthW)/100+B.hand*.9+4;
+ if(v==='back'&&L[2]>-d)L[2]=-d;
+ if(v==='front'&&L[2]<d)L[2]=d;
+}function syncSide(){const as=S.pose.armSide||{};document.querySelectorAll('#sideRows .grid4').forEach(r=>[...r.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.v===(as[r.dataset.k]||'auto'))))}
 function syncHoleAuto(){$('holeAuto').textContent='Cổ áo tự khớp cổ đầu: '+(S.body.holeAuto?'BẬT':'TẮT');$('holeAuto').classList.toggle('on',!!S.body.holeAuto)}
 $('holeAuto').onclick=()=>{S.body.holeAuto=S.body.holeAuto?0:1;syncHoleAuto();render()};
 // ---- vector face UI ----
