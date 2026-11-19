@@ -2634,22 +2634,26 @@ function applyHaalandWarp(group,h,ix,iy,size){
 }
 // Đầu ma-nơ-canh (người nộm tập): quả cầu lưới không mặt, các đường kinh tuyến xoay theo hướng đầu.
 function drawMannequinHead(g,K,yaw,h){
- const R=56*(h.width||100)/100,Ry=68*(h.height||100)/100,cx=100,cy=100,ink='#2b343c',skin=K.skin;
- el('path',{d:'M82 140 L82 192 Q100 199 118 192 L118 140Z',fill:skin,stroke:ink,'stroke-width':3,'stroke-linejoin':'round'},g);
- el('rect',{x:76,y:152,width:48,height:13,rx:6,fill:skin,stroke:ink,'stroke-width':3},g);
- el('ellipse',{cx,cy,rx:R,ry:Ry,fill:skin,stroke:ink,'stroke-width':3.4},g);
+ // khung đầu thon như đầu người: rộng ~88, cao ~136, hàm thu nhỏ dần về cằm
+ const R=44*(h.width||100)/100,Ry=68*(h.height||100)/100,cx=100,cy=102,ink='#2b343c',skin=K.skin;
+ const taper=a=>a<0?1-.30*Math.pow(-Math.sin(a),1.3):1;
+ const pt=(a,ph)=>[cx+R*Math.cos(a)*taper(a)*Math.sin(ph),cy-Ry*Math.sin(a)];
+ el('path',{d:'M87 140 L87 192 Q100 198 113 192 L113 140Z',fill:skin,stroke:ink,'stroke-width':3,'stroke-linejoin':'round'},g);
+ let o='';for(let i=0;i<=72;i++){const a=-Math.PI/2+i/72*Math.PI,[x,y]=pt(a,Math.PI/2);o+=(o?' L':'M')+x.toFixed(1)+' '+y.toFixed(1)}
+ for(let i=72;i>=0;i--){const a=-Math.PI/2+i/72*Math.PI,[x,y]=pt(a,-Math.PI/2);o+=' L'+x.toFixed(1)+' '+y.toFixed(1)}
+ el('path',{d:o+'Z',fill:skin,stroke:ink,'stroke-width':3.4,'stroke-linejoin':'round'},g);
+ el('rect',{x:79,y:170,width:42,height:12,rx:6,fill:skin,stroke:ink,'stroke-width':3},g);
  const grid=el('g',{fill:'none',stroke:ink,'stroke-width':1.4,'stroke-linecap':'round','stroke-opacity':.75},g);
  for(let j=0;j<12;j++){
   const ph=j*Math.PI/6-yaw;if(Math.cos(ph)<.04)continue;
-  let d='';for(let lat=-86;lat<=86;lat+=8){const a=lat*Math.PI/180;d+=(d?' L':'M')+(cx+R*Math.cos(a)*Math.sin(ph)).toFixed(1)+' '+(cy-Ry*Math.sin(a)).toFixed(1)}
+  let d='';for(let lat=-86;lat<=86;lat+=8){const [x,y]=pt(lat*Math.PI/180,ph);d+=(d?' L':'M')+x.toFixed(1)+' '+y.toFixed(1)}
   el('path',{d},grid);
  }
  for(let lat=-66;lat<=66;lat+=22){
-  const a=lat*Math.PI/180,y=cy-Ry*Math.sin(a),w=R*Math.cos(a);
-  el('path',{d:`M${cx-w} ${y} Q${cx} ${y+6} ${cx+w} ${y}`},grid);
+  const a=lat*Math.PI/180,[x1,y]=pt(a,-Math.PI/2),[x2]=pt(a,Math.PI/2);
+  el('path',{d:`M${x1} ${y} Q${cx} ${y+6} ${x2} ${y}`},grid);
  }
-}
-function drawCustomHead(target,nk,H,K,pr,yaw,neck){
+}function drawCustomHead(target,nk,H,K,pr,yaw,neck){
  const h={...HEAD_SHAPE,...H.shape},c=Math.cos(yaw),s=Math.abs(Math.sin(yaw)),back=c<-.16;
  const exact=h.base==='haaland',longFace=h.base==='long-cartoon';
  const k=H.size/200,w=h.width/100,v=h.height/100;
