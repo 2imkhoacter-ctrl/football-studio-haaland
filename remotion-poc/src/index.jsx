@@ -9,7 +9,7 @@ const STUDIO_CSS = 'html,body,.app,.stage{background:none!important;display:bloc
   '.panel,#handles,#ground,#zoomBar,.hint,#tabBar,.stage>:not(svg){display:none!important}' +
   '.stage svg,#svg{position:fixed!important;left:0;top:0;width:600px!important;height:720px!important;max-height:none!important;border:0!important;border-radius:0!important;background:none!important}';
 
-const Studio = ({ anim = 'anim.json', castCount = 0 }) => {
+const Studio = ({ anim = 'anim.json', castCount = 0, tall = false }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const ref = useRef(null);
@@ -22,7 +22,8 @@ const Studio = ({ anim = 'anim.json', castCount = 0 }) => {
     const start = async () => {
       if (booted.current) return; booted.current = true;
       const win = fr.contentWindow, doc = fr.contentDocument;
-      const st = doc.createElement('style'); st.textContent = STUDIO_CSS; doc.head.appendChild(st);
+      const st = doc.createElement('style'); st.textContent = STUDIO_CSS + (tall ? '.stage svg,#svg{height:1067px!important}' : ''); doc.head.appendChild(st);
+      if (tall) doc.getElementById('svg').setAttribute('viewBox', '0 -347 600 1067');
       const blob = await (await fetch(staticFile(anim))).blob();
       const dt = new win.DataTransfer(); dt.items.add(new win.File([blob], 'anim.json'));
       const inp = doc.getElementById('jsonFile'); inp.files = dt.files; inp.dispatchEvent(new win.Event('change'));
@@ -44,8 +45,8 @@ const Studio = ({ anim = 'anim.json', castCount = 0 }) => {
   }, [f, ready]);
 
   return (
-    <iframe ref={ref} src={staticFile('studio.html') + '?nosave'} width={600} height={720} title="studio"
-      style={{ position: 'absolute', left: -60, top: 480, border: 0, transformOrigin: '0 0', transform: `scale(${SCALE})`, background: 'transparent', WebkitMaskImage: 'linear-gradient(180deg,transparent 0,#000 24px)', maskImage: 'linear-gradient(180deg,transparent 0,#000 24px)' }} />
+    <iframe ref={ref} src={staticFile('studio.html') + '?nosave'} width={600} height={tall ? 1067 : 720} title="studio"
+      style={{ position: 'absolute', left: tall ? 0 : -60, top: tall ? 0 : 480, border: 0, transformOrigin: '0 0', transform: `scale(${tall ? 1.8 : SCALE})`, background: 'transparent', WebkitMaskImage: 'linear-gradient(180deg,transparent 0,#000 24px)', maskImage: 'linear-gradient(180deg,transparent 0,#000 24px)' }} />
   );
 };
 
@@ -119,5 +120,7 @@ const GoalScene = () => (
     <Studio anim="goal.json" castCount={5} />
   </AbsoluteFill>
 );
-const Root = () => (<><Composition id="FootballPOC" component={Scene} durationInFrames={300} fps={30} width={1080} height={1920} /><Composition id="Goal" component={GoalScene} durationInFrames={432} fps={24} width={1080} height={1920} /><Composition id="Film" component={FilmScene} durationInFrames={1440} fps={24} width={1080} height={1920} /></>);
+
+const Goal2Scene = () => (<AbsoluteFill style={{ background: '#101c38', overflow: 'hidden' }}><Studio anim="goal2.json" castCount={4} tall /></AbsoluteFill>);
+const Root = () => (<><Composition id="FootballPOC" component={Scene} durationInFrames={300} fps={30} width={1080} height={1920} /><Composition id="Goal2" component={Goal2Scene} durationInFrames={360} fps={24} width={1080} height={1920} /><Composition id="Goal" component={GoalScene} durationInFrames={432} fps={24} width={1080} height={1920} /><Composition id="Film" component={FilmScene} durationInFrames={1440} fps={24} width={1080} height={1920} /></>);
 registerRoot(Root);

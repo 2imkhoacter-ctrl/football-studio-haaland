@@ -696,8 +696,15 @@ function renderOne(target=fig,preview=true){
  {const scn=S.props&&S.props.scene;
   if(scn&&scn.show&&scn.style==='night360'){
    const kz=100/Math.max(20,scn.size||100),blur=Math.max(0,scn.dof||0)/10;
-   if(kz!==1||blur>0){
-    const grp=svgn('g',{transform:`translate(300 645) scale(${kz}) translate(-300 -645)`},target);
+   if(kz!==1||blur>0||scn.free>0){
+    let tr=`translate(300 645) scale(${kz}) translate(-300 -645)`,hideActive=false;
+    if(scn.free>0){
+     const cam=nightCamera(scn),pt=cam.camera([(scn.x-300)*.068,0,(640-scn.y)*.075]);
+     if(pt[2]<.65)hideActive=true;
+     else{const [sx,sy]=cam.project(pt),s=cam.distance/pt[2]*kz;tr=`translate(${sx} ${sy}) scale(${s}) translate(-300 -645)`;
+      svgn('ellipse',{cx:sx,cy:sy,rx:58*s,ry:9*s,fill:'#000','fill-opacity':.28},target);}
+    }
+    const grp=svgn('g',{transform:tr,style:hideActive?'display:none':''},target);
     if(blur>0){const id='dofBlur'+(renderOne.dof=(renderOne.dof||0)+1);const fl=svgn('filter',{id,x:'-40%',y:'-40%',width:'180%',height:'180%'},grp);svgn('feGaussianBlur',{stdDeviation:blur},fl);const inner=svgn('g',{filter:'url(#'+id+')'},grp);target=inner}
     else target=grp;
    }
@@ -1389,7 +1396,7 @@ $('holeAuto').onclick=()=>{S.body.holeAuto=S.body.holeAuto?0:1;syncHoleAuto();re
 // A prop is a drawn object with its own position / size / spin / layer. It is either FREE (stage coordinates) or ATTACHED to a hand / foot
 // (then x,y are an offset from that joint, so the ball follows the kicking foot). Everything is part of the keyframes.
 const PROP_DEF={
- scene:{show:true,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,tilt:10,style:'night360',dof:0},
+ scene:{show:true,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,tilt:10,style:'night360',dof:0,free:0,camX:300,camY:640,ty:0,camH:0},
  ball:{show:false,layer:'front',attach:'free',x:430,y:612,size:100,rot:0,style:'png',h:0,fire:0,vx:0,vz:0},
  trophy:{show:false,layer:'front',attach:'free',x:150,y:540,size:100,rot:0,style:'png'},
  goal:{show:false,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,style:'draw'}
@@ -1507,9 +1514,9 @@ PROP_DRAW.scene=function(g,P){
 // Camera follows the player across a 105 × 68 m field. All field geometry shares world coordinates.
 function nightCamera(scene) {
  const yaw=rad(scene.rot+(S.pose.yaw||0)),sin=Math.sin(yaw),cos=Math.cos(yaw);
- const x=(scene.x-300)*.068,z=(640-scene.y)*.075;
+ const free=scene.free>0,x=((free?scene.camX:scene.x)-300)*.068,z=(640-(free?scene.camY:scene.y))*.075;
  const distance=4.8*scene.size/100,focal=570*scene.size/100;
- const height=2.8-2.67*Math.max(0,Math.min(1,(scene.tilt||0)/45));
+ const height=scene.camH>0?scene.camH:2.8-2.67*Math.max(0,Math.min(1,(scene.tilt||0)/45));
  const horizon=645-focal*height/distance;
  const camera=([wx,wy,wz])=>[(wx-x)*cos-(wz-z)*sin,wy,(wx-x)*sin+(wz-z)*cos+distance];
  const project=([a,b,d])=>[300+focal*a/d,horizon+focal*(height-b)/d].map(n=>+n.toFixed(2));
@@ -1548,7 +1555,10 @@ function drawNightStadium(parent,scene){
   svgn('path',{d,fill:'none',stroke,'stroke-width':width,'stroke-linecap':'round'},parent);
  }
  const rect=(y,h,fill)=>svgn('rect',{x:-26000,y,width:52000,height:h,fill},parent);
- rect(-26000,53000,'#101c38');
+ // trời đêm: dải màu xanh khán đài kéo lên cao (không còn dải tối trống khi camera cận hoặc khung dọc)
+ const skyDefs=svgn('defs',{},parent),skyGrad=svgn('linearGradient',{id:'nightSkyGrad',gradientUnits:'userSpaceOnUse',x1:0,y1:horizon-2600,x2:0,y2:horizon},skyDefs);
+ [['0','#1d3568'],['.45','#34578f'],['1','#5f86c0']].forEach(([o,c])=>svgn('stop',{offset:o,'stop-color':c},skyGrad));
+ rect(-26000,53000,'#34578f');rect(horizon-2600,2600,'url(#nightSkyGrad)');
  rect(horizon,27000,'#2e8d32');
  const stars=[];
  for(let i=0;i<95;i++){
@@ -2286,13 +2296,14 @@ function drawCast(target,phase){
  inCast=true;const OW0=OW,P0=S.props,sc=nightScene();
  const cam=sc?nightCamera(sc):null,camDeg=cam?cam.yaw*180/Math.PI:0,refDepth=cam?cam.distance:0,ref=S.pose.hip[1];
  try{
-  if(sc&&phase==='behind')el('ellipse',{cx:S.pose.hip[0],cy:645,rx:58*(100/Math.max(20,sc.size||100)),ry:9*(100/Math.max(20,sc.size||100)),fill:'#000','fill-opacity':.28},target); // bóng người đang chỉnh
+  if(sc&&sc.free<=0&&phase==='behind')el('ellipse',{cx:S.pose.hip[0],cy:645,rx:58*(100/Math.max(20,sc.size||100)),ry:9*(100/Math.max(20,sc.size||100)),fill:'#000','fill-opacity':.28},target); // bóng người đang chỉnh
   const items=[];
+  const actDepth=(cam&&sc.free>0)?cam.camera([(sc.x-300)*.068,0,(640-sc.y)*.075])[2]:refDepth;
   S.cast.forEach((a,i)=>{
    swapIn(a);S.props=hiddenProps(P0);let o;
    try{
     const inf=castInfo();
-    if(cam){const pt=cam.camera([(inf.wx-300)*.068,0,(640-inf.wy)*.075]);o={a,i,inf,pt,key:pt[2],behind:pt[2]>refDepth,ok:pt[2]>=.65}}
+    if(cam){const pt=cam.camera([(inf.wx-300)*.068,0,(640-inf.wy)*.075]);o={a,i,inf,pt,key:pt[2],behind:pt[2]>actDepth,ok:pt[2]>=.65}}
     else o={a,i,inf,key:S.pose.hip[1],behind:S.pose.hip[1]<ref,ok:true};
    }finally{S.props=P0;swapIn(a)}
    items.push(o);
@@ -2315,6 +2326,7 @@ function drawCast(target,phase){
  }finally{inCast=false;OW=OW0}
 }
 function render(target=fig,preview=true){
+ if(target===fig){const sc0=S.props&&S.props.scene,ty0=(sc0&&sc0.show&&sc0.style==='night360')?(sc0.ty||0):0;if(ty0)fig.setAttribute('transform','translate(0 '+ty0+')');else if(fig.hasAttribute('transform'))fig.removeAttribute('transform')}
  // Sân đêm 360°: người đang chỉnh luôn đứng đúng tâm xoay (hông ở giữa khung) - muốn dời thì đổi tọa độ sân,
  // nếu không khi xoay camera chân sẽ trượt khỏi điểm đã chỉ định.
  if(nightScene()&&S.nightLock!==false&&S.pose&&S.pose.hip)S.pose.hip[0]=300;

@@ -92,7 +92,7 @@ function buildActor(spec, body, baseFace, faceOn, o) {
     if (ex.talk) { face.mouthKind = (face.mouthKind === 'closed' || face.mouthKind === 'smile') ? 'a' : face.mouthKind; face.mouthOpen = r2(20 + 60 * hash(i * 0.37 + (spec.seed || 0))); }
     const wh = headAt(t) + (spec.extra ? spec.extra(t) : 0);
     const key = {
-      t: Math.round(t * 1000) / 1000, hip, type: 0, rotFine, yaw: 0,
+      t: Math.round(t * 10000) / 10000, hip, type: 0, rotFine, yaw: 0,
       limbs: { hL, hR, fL: feet.fL, fR: feet.fR }, poles, ends: { hL: [-8, 0, 0], hR: [-8, 0, 0], fL: [0, 0, 0], fR: [0, 0, 0] },
       side: { hL: 'auto', hR: 'auto' }, hyaw: spec.hyaw ? spec.hyaw(t) : 0, hrot: ex.talk ? 3 * Math.sin(t * 9) : 0, expression: 'neutral', face, lin: true,
       _X: X, _Z: Z, _wh: wh
