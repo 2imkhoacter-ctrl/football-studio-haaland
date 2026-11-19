@@ -93,8 +93,8 @@ input[type=file]{font-size:12px;max-width:100%}
    <div class="row"><button id="dcReset">Về vị trí gốc của ô này</button></div>
   </div>  <div class="box"><h3>XOAY BÀN TAY / BÀN CHÂN (ổ cổ tay, cổ chân)</h3>
    <div class="grid4" id="endBtns"></div>
-   <div class="row"><label>Gập lên (-) / xuống (+) <b id="endBendVal">0°</b></label><input type="range" id="endBend" min="-85" max="85" value="0"></div>
-   <div class="row"><label>Xoay sang bên <b id="endTwistVal">0°</b></label><input type="range" id="endTwist" min="-85" max="85" value="0"></div>
+   <div class="row"><label>Gập (tay: + về lòng bàn tay; chân: lên - / xuống +) <b id="endBendVal">0°</b></label><input type="range" id="endBend" min="-85" max="85" value="0"></div>
+   <div class="row"><label>Nghiêng sang bên (tay: + về ngón cái) <b id="endTwistVal">0°</b></label><input type="range" id="endTwist" min="-85" max="85" value="0"></div>
    <div class="row"><label>Lật bàn tay (xoay quanh cẳng tay) <b id="endRollVal">0°</b></label><input type="range" id="endRoll" min="-180" max="180" value="0"></div>
    <div class="row"><button id="endReset">Về thẳng theo cẳng tay / chân</button></div>
   </div>
@@ -692,18 +692,25 @@ function render(target=fig,preview=true){
   const tipR=B.wFore*.36,cuffLen=Math.max(5,B.wFore*.32),stopAt=along(e,fore,-cuffLen);
   mesh.hinge('skin',start,j,stopAt,upper,fore,outer*.87,radius,B.wFore*.48,tipR*1.02);
   mesh.cup('skin',stopAt,fore,cuffLen,tipR*1.02,tipR*1.02,tipR*.68,cuffLen*.9);
-  const [hb,ht,hroll=0]=(S.pose.ends&&S.pose.ends[k])||[0,0,0],hdir=endDir(fore,hb,ht);
+  const [hb,ht,hroll=0]=(S.pose.ends&&S.pose.ends[k])||[0,0,0];
   const wristR=tipR*.58,depthIn=cuffLen*.8;
   // wrist plug into the cuff, then a hand that reads as a hand: palm + four finger knuckles along its far edge + a separate thumb.
   // The knuckles make the silhouette scalloped, so the direction of the hand is obvious from any side.
   const capProf=(L,r)=>{const o=[[0,r*.95],[Math.max(0,L-r*1.6),r]];for(const a of [20,40,60,78,90]){const q=a*Math.PI/180;o.push([L-r+r*Math.sin(q),r*Math.cos(q)])}return o};
   const hs=1.35*(B.handS||100)/100,hl=B.hand*2.3*hs,hr=B.hand*1.0*hs;
-  const sideRef=[k==='hL'?1:-1,0,0],sd=axisUnit(sub3(sideRef,mul3(hdir,dot3(sideRef,hdir))));
   // hanging/vertical arm: hand width runs front-back (thumb forward); arm out to the side: palm faces the viewer so the fingers read clearly.
   // natural hand: the palm faces the body (arm hanging); with the arm held out sideways the palm faces down; thumb to the front
-  const inw=[k==='hL'?1:-1,0,0],pn0=sub3(inw,mul3(hdir,dot3(inw,hdir))),dn0=sub3([0,1,0],mul3(hdir,dot3([0,1,0],hdir))),pn=axisUnit(add3(pn0,mul3(dn0,.5)));
-  let fwA=axisUnit(cross3(pn,hdir));if(dot3(fwA,[0,0,1])<0)fwA=mul3(fwA,-1);
-  const fw0=fwA,rr=rad(hroll||0),fw=axisUnit(add3(mul3(fw0,Math.cos(rr)),mul3(cross3(hdir,fw0),Math.sin(rr)))),nrm=axisUnit(cross3(hdir,fw)); // nrm = palm normal (towards the body), fw = hand width (front-back)
+  // WRIST in the hand's own frame, like a real wrist: the palm frame sits on the FOREARM (palm to the body, thumb forward),
+  // "Lật" turns it around the forearm, then "Gập" bends the hand towards the palm (+) / back of the hand (-)
+  // and "Xoay sang bên" bends it towards the thumb (+) / little finger (-). Same feel whatever direction the arm points.
+  const inw=[k==='hL'?1:-1,0,0],pn0=sub3(inw,mul3(fore,dot3(inw,fore))),dn0=sub3([0,1,0],mul3(fore,dot3([0,1,0],fore))),pnF=axisUnit(add3(pn0,mul3(dn0,.5)));
+  let fwF=axisUnit(cross3(pnF,fore));if(dot3(fwF,[0,0,1])<0)fwF=mul3(fwF,-1);
+  const rr=rad(hroll||0),fwR=axisUnit(add3(mul3(fwF,Math.cos(rr)),mul3(cross3(fore,fwF),Math.sin(rr))));
+  const pS=Math.sign(dot3(cross3(fore,fwF),pnF))||1,pnR=mul3(axisUnit(cross3(fore,fwR)),pS);
+  const cl=d=>rad(Math.max(-85,Math.min(85,d))),bb=cl(hb),bt=cl(ht);
+  const hdir=axisUnit(add3(add3(mul3(fore,Math.cos(bb)*Math.cos(bt)),mul3(pnR,Math.sin(bb)*Math.cos(bt))),mul3(fwR,Math.sin(bt))));
+  const fw=axisUnit(sub3(fwR,mul3(hdir,dot3(fwR,hdir)))),nrm=axisUnit(cross3(hdir,fw)); // nrm = palm normal, fw = hand width (thumb side)
+  const sideRef=[k==='hL'?1:-1,0,0],sd=axisUnit(sub3(sideRef,mul3(hdir,dot3(sideRef,hdir))));
   // flat open hand: palm is a thin wide slab, four long straight fingers slightly spread, thumb sticking out at an angle.
   const pw=Math.max(hr*1.0,tipR*1.25),pt=Math.max(hr*.5,tipR*.5),pl=hl*.42;
   // hand piece = short wrist stub (same thickness as the forearm tip, sits inside the cuff socket) + flat palm.
