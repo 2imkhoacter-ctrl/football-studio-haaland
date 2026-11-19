@@ -68,3 +68,6 @@ Dá»±ng láº¡i Ä‘Ãºng tÆ° tháº¿/gÃ³c quay (náº¡p `data/characters/haaland-final.js
 
 
 
+
+## B?n v25 (dua vào kho 2026-11-19, do ch? d? án + GPT làm thêm)
+app/football-studio.html gi? là v25 (6,5 MB, nhúng thêm ?nh); b?n tru?c gi? ? app/football-studio-v24-backup.html. Thêm: ô CH?NH HÌNH Ð?U (bi?m h?a: m?t/tai kh?ng l?, c?m, hàm, má, mui, ki?u tóc, t? can khung m?t), n?m/xòe tay, nhân v?t Vini Jr. (d?u 4 góc, 2 dáng m?u, có khôi ph?c), ch?nh d? dài tay áo/trang ph?c/g?u qu?n, sân dêm 360° (camera xoay, ng?ng, bóng khóa sân t? d?i l?p), các c?nh biên/khu HLV/góc c?u môn/nhìn t? trên. Khóa luu v?n fs_state_v2. M?i ch? ki?m tra: m? du?c, không l?i console; chua th? t?ng tính nang m?i b?ng m?t.
