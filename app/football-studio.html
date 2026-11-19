@@ -154,6 +154,7 @@ input[type=file]{font-size:12px;max-width:100%}
      <label for="extremeChin">Kéo cằm xuống <b id="extremeChinVal">0</b>%</label><input id="extremeChin" type="range" min="0" max="100" value="0">
     </div>
     <div id="headShapeSliders"></div>
+    <div id="partsBox" hidden style="margin-top:10px;border-top:1px solid #345;padding-top:8px"></div>
    </div>
   </div>
   <div class="box"><h3>ĐẦU (ảnh cartoon PNG nền trong suốt)</h3>
@@ -1077,27 +1078,52 @@ function render(target=fig,preview=true){
    hg.setAttribute('opacity','.66');
   }
   target.appendChild(hg);
-  const ig=el('g',{transform:flip?`translate(${2*(ix+H.size/2)},0) scale(-1,1)`:''},hg);
-  if(fittedHead){
-   const fit=useKey==='front'?H.shape.fit:fitHeadView(meta,useKey);
-   applyHaalandWarp(ig,{...H.shape,fit},ix,iy,H.size);
-   if(H.shape.extremeChin>0&&useKey!=='back'&&useKey!=='q135'){
-    const overlay=el('g',{transform:hg.getAttribute('transform'),'pointer-events':'none'});
-    const local=el('g',{transform:ig.getAttribute('transform')},overlay);
-    drawExtendedChin(local,meta,fit,ix,iy,H.size,K.skin,H.shape.extremeChin);
-    foregroundChin=overlay;
+  const flipT=flip?`translate(${2*(ix+H.size/2)},0) scale(-1,1)`:'';
+  const fit=fittedHead?(useKey==='front'?H.shape.fit:fitHeadView(meta,useKey)):null;
+  const paint=(ig,main)=>{
+   if(fittedHead){
+    applyHaalandWarp(ig,{...H.shape,fit},ix,iy,H.size);
+    if(main&&H.shape.extremeChin>0&&useKey!=='back'&&useKey!=='q135'){
+     const overlay=el('g',{transform:hg.getAttribute('transform'),'pointer-events':'none'});
+     const local=el('g',{transform:ig.getAttribute('transform')},overlay);
+     drawExtendedChin(local,meta,fit,ix,iy,H.size,K.skin,H.shape.extremeChin);
+     foregroundChin=overlay;
+    }
+   }
+   const faceActive=faceOn&&meta.keyed&&meta.eyes&&meta.eyes.length>=1;
+   const eyeScale=fittedHead?Number(H.shape.extremeEyes||0)/100:0;
+   const separateEyes=faceActive&&eyeScale>0&&meta.eyePlate&&meta.eyes.every(e=>e.contour);
+   const eyeTurn=useKey==='front'?hface*ang:(ang-(near?near[0]:0));
+   if(faceActive&&!separateEyes)drawFaceBack(ig,meta,ix,iy,H.size,K,useKey,eyeTurn);
+   const im=el('image',{x:ix,y:iy,width:H.size,height:H.size,preserveAspectRatio:'xMidYMid meet'},ig);
+   const imageSource=separateEyes?meta.eyePlate:src;
+   im.setAttribute('href',imageSource);im.setAttributeNS('http://www.w3.org/1999/xlink','href',imageSource);
+   if(separateEyes)drawSeparateEyes(ig,meta,ix,iy,H.size,K,useKey,eyeTurn,eyeScale);
+   if(faceActive)drawFaceFront(ig,meta,ix,iy,H.size,K,useKey);
+  };
+  const regions=fittedHead?partRegions(H.shape.parts,fit):[];
+  if(!regions.length)paint(el('g',{transform:flipT},hg),true);
+  else{
+   // BỘ PHẬN TÁCH RỜI: mỗi bộ phận được cắt khỏi đầu rồi dán lại ở vị trí/kích thước/góc tùy ý
+   const sz=H.size,X=u=>ix+u*sz,Y=u=>iy+u*sz,skin=meta.skin||K.skin;
+   const defs=el('defs',{},hg),mk=el('mask',{id:'hp_mask',maskUnits:'userSpaceOnUse',x:ix-sz,y:iy-sz,width:sz*3,height:sz*3},defs);
+   el('rect',{x:ix-sz,y:iy-sz,width:sz*3,height:sz*3,fill:'#fff'},mk);
+   const mkg=el('g',{transform:flipT},mk),flg=el('g',{transform:flipT});
+   for(const r of regions){
+    const ea={cx:X(r.cx),cy:Y(r.cy),rx:r.rx*sz,ry:r.ry*sz};
+    el('ellipse',{...ea,fill:'#000'},mkg);
+    if(r.fill)el('ellipse',{...ea,fill:skin},flg);
+   }
+   paint(el('g',{transform:flipT},el('g',{mask:'url(#hp_mask)'},hg)),true);
+   hg.appendChild(flg);
+   for(const r of regions){
+    const p=r.p,cxs=flip?2*(ix+sz/2)-X(r.cx):X(r.cx),cys=Y(r.cy);
+    const mv=el('g',{transform:`translate(${cxs+p.dx*sz/100},${cys+p.dy*sz/100}) rotate(${p.rot}) scale(${(p.flip?-1:1)*p.sx/100},${p.sy/100}) translate(${-cxs},${-cys})`},hg);
+    const cid='hp_clip_'+r.name;
+    el('ellipse',{cx:X(r.cx),cy:Y(r.cy),rx:r.rx*sz,ry:r.ry*sz},el('clipPath',{id:cid},defs));
+    paint(el('g',{transform:flipT,'clip-path':'url(#'+cid+')'},mv),false);
    }
   }
-  const faceActive=faceOn&&meta.keyed&&meta.eyes&&meta.eyes.length>=1;
-  const eyeScale=fittedHead?Number(H.shape.extremeEyes||0)/100:0;
-  const separateEyes=faceActive&&eyeScale>0&&meta.eyePlate&&meta.eyes.every(e=>e.contour);
-  const eyeTurn=useKey==='front'?hface*ang:(ang-(near?near[0]:0));
-  if(faceActive&&!separateEyes)drawFaceBack(ig,meta,ix,iy,H.size,K,useKey,eyeTurn);
-  const im=el('image',{x:ix,y:iy,width:H.size,height:H.size,preserveAspectRatio:'xMidYMid meet'},ig);
-  const imageSource=separateEyes?meta.eyePlate:src;
-  im.setAttribute('href',imageSource);im.setAttributeNS('http://www.w3.org/1999/xlink','href',imageSource);
-  if(separateEyes)drawSeparateEyes(ig,meta,ix,iy,H.size,K,useKey,eyeTurn,eyeScale);
-  if(faceActive)drawFaceFront(ig,meta,ix,iy,H.size,K,useKey);
  }
  drawLayer(target,[
   ...arms.filter(k=>!farSleeves.includes(k)).map(k=>armGeometry[k].sleeve),
@@ -2218,6 +2244,9 @@ $('tIdle').onclick=e=>{S.idle=!S.idle;e.target.classList.toggle('on',S.idle);sch
 $('tLoop').onclick=e=>{S.loop=!S.loop;e.target.classList.toggle('on',S.loop);scheduleSave()};
 
 const HEAD_SHAPE={enabled:false,width:100,height:100,cheek:100,jaw:87,chin:0,ear:100,earY:0,eyeY:0,eyeWidth:100,eyeHeight:100,eyeGap:100,caricature:'none',caricatureStrength:75,extremeEyes:0,extremeEars:0,extremeChin:0,nose:'round',hair:'curls'};
+const PART_LIST=[['eyeL','Mắt trái'],['eyeR','Mắt phải'],['browL','Lông mày trái'],['browR','Lông mày phải'],['nose','Mũi'],['mouth','Miệng'],
+ ['earL','Tai trái'],['earR','Tai phải'],['cheekL','Má trái'],['cheekR','Má phải'],['chin','Cằm']];
+const PART_DEF={on:false,dx:0,dy:0,sx:100,sy:100,rot:0,flip:false,size:100};
 const HEAD_RANGES=[
  ['Bề ngang đầu','width',35,280],['Chiều cao đầu','height',45,300],
  ['Gò má','cheek',20,320],['Bề ngang hàm','jaw',15,320],['Cằm cao / thấp','chin',-70,70],
@@ -2257,6 +2286,7 @@ function syncHeadEditor(){
  $('caricatureStrength').value=h.caricatureStrength;
  $('caricatureStrengthVal').textContent=h.caricatureStrength;$('hsn_caricatureStrength').value=h.caricatureStrength;
  $('extremeHeadRow').hidden=!photo;$('extremeHeadRow').style.display=photo?'block':'none';
+ if(typeof syncParts==='function')syncParts();
  for(const key of ['extremeEyes','extremeEars','extremeChin']){
   $(key).value=h[key];$(key+'Val').textContent=h[key];$('hsn_'+key).value=h[key];
  }
@@ -2527,6 +2557,72 @@ for(const key of ['extremeEyes','extremeEars','extremeChin']){
 $('caricatureKind').onchange=e=>updateHeadShape('caricature',e.target.value);
 $('caricatureStrength').oninput=e=>updateHeadShape('caricatureStrength',+e.target.value);
 $('haalandTrace').onchange=e=>{S.haalandTrace=e.target.checked;render()};
+// UI bộ phận tách rời
+const PART_SL=[['Dịch ngang','dx',-300,300],['Dịch dọc (âm = lên trán, dương = xuống bụng)','dy',-300,300],['To / nhỏ theo chiều ngang','sx',5,900],['To / nhỏ theo chiều dọc','sy',5,900],['Xoay (°)','rot',-180,180],['Vùng cắt rộng / hẹp','size',30,350]];
+let partSel='eyeL';
+function curPart(){return {...PART_DEF,...((S.head.shape.parts||{})[partSel]||{})}}
+function setPart(patch){
+ const parts={...(S.head.shape.parts||{})};
+ parts[partSel]={...PART_DEF,...(parts[partSel]||{}),...patch};
+ updateHeadShape('parts',parts);
+}
+(function(){
+ const box=$('partsBox');
+ box.innerHTML='<div class="sub"><b>BỘ PHẬN TÁCH RỜI</b> — cắt từng bộ phận khỏi đầu rồi dán đi bất cứ đâu, to nhỏ, xoay, lật tùy ý (chỉ dùng được với đầu đã “Tự căn khung mặt”).</div>'+
+ '<div class="row"><label for="partSel">Bộ phận</label><select id="partSel">'+PART_LIST.map(([k,n])=>`<option value="${k}">${n}</option>`).join('')+'</select></div>'+
+ '<div class="row"><label><input id="partOn" type="checkbox"> Tách bộ phận này ra</label></div>'+
+ '<div class="row"><label><input id="partFlip" type="checkbox"> Lật ngang</label></div>'+
+ PART_SL.map(([n,k])=>`<div class="row"><label for="pt_${k}">${n} <b id="ptv_${k}"></b></label><input id="pt_${k}" type="range" min="${PART_SL.find(a=>a[1]===k)[2]}" max="${PART_SL.find(a=>a[1]===k)[3]}"></div>`).join('')+
+ '<div class="row"><button id="partReset" type="button">Đặt lại bộ phận này</button><button id="partResetAll" type="button">Đặt lại tất cả bộ phận</button></div>';
+ $('partSel').onchange=e=>{partSel=e.target.value;syncParts()};
+ $('partOn').onchange=e=>setPart({on:e.target.checked});
+ $('partFlip').onchange=e=>setPart({flip:e.target.checked,on:true});
+ for(const [,k] of PART_SL)$('pt_'+k).oninput=e=>setPart({[k]:+e.target.value,on:true});
+ $('partReset').onclick=()=>{const parts={...(S.head.shape.parts||{})};delete parts[partSel];updateHeadShape('parts',parts)};
+ $('partResetAll').onclick=()=>updateHeadShape('parts',{});
+})();
+function syncParts(){
+ const photo=isPhotoHead({...HEAD_SHAPE,...S.head.shape});
+ $('partsBox').hidden=!photo;
+ if(!photo)return;
+ const p=curPart();
+ $('partSel').value=partSel;$('partOn').checked=!!p.on;$('partFlip').checked=!!p.flip;
+ for(const [,k] of PART_SL){$('pt_'+k).value=p[k];$('ptv_'+k).textContent=p[k]}
+}
+// ===== BỘ PHẬN TÁCH RỜI (cắt khỏi ảnh đầu, dán lại tùy ý) =====
+function partBase(name,fit){
+ const e=fit.eyes||[],c=fit.center;
+ if(!e.length)return null;
+ const one=e.length===1,gap=one?e[0].w*2.3:Math.max(.1,e[1].cx-e[0].cx),ey=e.reduce((s,o)=>s+o.cy,0)/e.length;
+ const mx=one?e[0].cx+e[0].w*1.2:c;
+ const eye=n=>one?(n===0?e[0]:null):e[n];
+ const ls=fit.lowerShift||0;
+ switch(name){
+  case 'eyeL':{const o=eye(0);return o&&{cx:o.cx,cy:o.cy,rx:o.w*.78,ry:o.h*.95,fill:1}}
+  case 'eyeR':{const o=eye(1);return o&&{cx:o.cx,cy:o.cy,rx:o.w*.78,ry:o.h*.95,fill:1}}
+  case 'browL':{const o=eye(0);return o&&{cx:o.cx,cy:o.cy-o.h*1.12,rx:o.w*.8,ry:o.h*.55,fill:1}}
+  case 'browR':{const o=eye(1);return o&&{cx:o.cx,cy:o.cy-o.h*1.12,rx:o.w*.8,ry:o.h*.55,fill:1}}
+  case 'nose':return {cx:one?mx+e[0].w*.5:c,cy:ey+gap*.5,rx:gap*.3,ry:gap*.36,fill:1};
+  case 'mouth':return {cx:mx,cy:ey+gap*1.05,rx:gap*.62,ry:gap*.4,fill:1};
+  case 'earL':return {cx:fit.earL,cy:fit.earY,rx:.075,ry:.105,fill:0};
+  case 'earR':return {cx:fit.earR,cy:fit.earY,rx:.075,ry:.105,fill:0};
+  case 'cheekL':return one?null:{cx:c-gap*.95,cy:ey+gap*.6,rx:gap*.42,ry:gap*.5,fill:0};
+  case 'cheekR':return {cx:one?mx:c+gap*.95,cy:ey+gap*.6,rx:gap*.42,ry:gap*.5,fill:0};
+  case 'chin':return {cx:c,cy:.86+ls,rx:.17,ry:.09,fill:0};
+ }
+ return null;
+}
+function partRegions(parts,fit){
+ if(!parts||!fit)return [];
+ const out=[];
+ for(const [name] of PART_LIST){
+  const p=parts[name];if(!p||!p.on)continue;
+  const b=partBase(name,fit);if(!b)continue;
+  const q={...PART_DEF,...p},k=q.size/100;
+  out.push({name,cx:b.cx,cy:b.cy,rx:b.rx*k,ry:b.ry*k,fill:b.fill,p:q});
+ }
+ return out;
+}
 function fitHeadView(meta,view){
  const eyes=meta.eyes||[],neckY=meta.by??.97,neckX=meta.nx??.5;
  const center=eyes.length===2?(eyes[0].cx+eyes[1].cx)/2:neckX;
