@@ -16,7 +16,7 @@ const THETA_A = process.env.VIEW_THETA != null ? +process.env.VIEW_THETA : 0;   
 
 const VINI_FACE = process.env.VINI_FACE != null ? +process.env.VINI_FACE : 180;   // thân nhìn thẳng vào máy (tay giang cân đối)
 const VINI_HYAW = process.env.VINI_HYAW != null ? +process.env.VINI_HYAW : -45;     // chỉ XOAY ĐẦU nghiêng để thấy môi chu nhô ra (dương/âm = hướng quay)   // 180 = nhìn thẳng vào máy; 135/225 = nghiêng 3/4 (225: mõm chỉa sang trái)
-const HP = [0, +(process.env.HP_Z || 46.2)], VP = [0, 10];     // Haaland đứng gần khung thành (z=52.5) để khung thành đủ lớn so với sân             // chỗ đứng trên sân (mét). Hai người cách xa nhau để cảnh nào cũng không thấy người kia.
+const HP = [0, +(process.env.HP_Z || 50.2)], VP = [0, 10];     // Haaland đứng cách vạch gôn (z=52.5) khoảng 2,3 m: khung thành gốc của sân 360 to đúng tỉ lệ so với người             // chỗ đứng trên sân (mét). Hai người cách xa nhau để cảnh nào cũng không thấy người kia.
 const ease = (t, a, b) => S(clamp((t - a) / (b - a), 0, 1));
 const pulse = (t, t0, d) => (t < t0 || t > t0 + d) ? 0 : Math.pow(1 - (t - t0) / d, 2);
 
@@ -131,7 +131,7 @@ const k0 = film.keys[0];
 film.pose = { type: 0, rotFine: 0, yaw: k0.yaw, hip: k0.hip, limbs: k0.limbs, poles: k0.poles, ends: k0.ends, armSide: { hL: 'auto', hR: 'auto' } };
 film.props = Object.assign({}, film.props || {}, k0.props);
 film.face = Object.assign({}, H.face, { on: true });
-film.look = Object.assign({}, film.look, { hair: '#8a6420' });   // lông mày Haaland lấy màu tóc: đậm hơn để thấy rõ khi nhìn nghiêng
+film.look = Object.assign({}, film.look, { hair: '#f9d07a' });   // lông mày Haaland = ĐÚNG màu tóc đo trên ảnh đầu (không tự pha màu khác)
 film.cast = [{ meta: { wx: toSceneX(VP[0]), wy: toSceneY(VP[1]), wh: 0 }, pose: JSON.parse(JSON.stringify(V.pose)), body: V.body, look: Object.assign({}, V.look, { hair: '#1b1716' }), head: V.head, decals: V.decals, face: V.face, keys: cleanKeys(viniKeys) }];
 const out = path.resolve(process.argv[2] || path.join(root, 'animations', 'phim-haaland-vini.json'));
 fs.writeFileSync(out, JSON.stringify(film));
