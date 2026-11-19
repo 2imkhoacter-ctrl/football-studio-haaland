@@ -1928,7 +1928,7 @@ $('exFrames').onclick=async()=>{
  }catch(err){status.textContent=err.name==='AbortError'?'Đã đóng hộp chọn thư mục.':`Lỗi xuất sau ${written} PNG: ${err.message}`}
  finally{button.disabled=false;cancel.hidden=true}
 };
-$('exJson').onclick=()=>saveJSON('football-studio.json',{...stateToSave(),v:4,head:S.head,cast:S.cast.map(a=>({pose:a.pose,body:a.body,look:a.look,head:a.head,decals:a.decals,face:a.face,keys:a.keys}))});
+$('exJson').onclick=()=>saveJSON('football-studio.json',{...stateToSave(),v:4,head:S.head,cast:S.cast.map(a=>({meta:a.meta,pose:a.pose,body:a.body,look:a.look,head:a.head,decals:a.decals,face:a.face,keys:a.keys}))});
 $('imJson').onclick=()=>$('jsonFile').click();
 $('jsonFile').onchange=async e=>{
  const [file]=e.target.files;e.target.value='';
@@ -2222,7 +2222,8 @@ function applyState(d){
 // Nhân vật đang chỉnh luôn nằm trong S. Các diễn viên khác nằm trong S.cast (mỗi người một bộ pose/body/look/head...).
 // Vẽ: ai đứng xa (hông cao hơn trên màn hình) vẽ trước, ai gần vẽ sau. Chọn diễn viên = hoán đổi dữ liệu vào S.
 if(!S.cast)S.cast=[];
-const CAST_F=['pose','body','look','head','headMeta','decals','face','keys'];
+const CAST_F=['pose','body','look','head','headMeta','decals','face','keys','meta'];
+if(!S.meta)S.meta={wx:300,wy:640,wh:0};
 let inCast=false;
 function swapIn(a){for(const f of CAST_F){const x=S[f];S[f]=a[f];a[f]=x}}
 function uniquifyIds(g,tag){
@@ -2237,21 +2238,48 @@ function uniquifyIds(g,tag){
   else if(v.includes('url(#'))e.setAttribute(at.name,rn(v));
  }
 }
-function castY(a){
- swapIn(a);const P0=S.props,hid={};for(const id in PROP_DEF)hid[id]={...PROP_DEF[id],...(P0[id]||{}),show:false};S.props=hid;
- let y;try{const k=S.keys&&S.keys.length?poseAt(S.t):null;if(k)applyKey(k,S.t,false);y=S.pose.hip[1]}finally{S.props=P0;swapIn(a)}
- return y;
+function nightScene(){const s=S.props&&S.props.scene;return s&&s.show&&s.style==='night360'?s:null}
+// Vị trí/hướng trên sân của người ĐANG CHỈNH nằm ở props.scene (x,y,rot): camera bám theo người đó.
+function metaToScene(){const sc=nightScene();if(sc&&S.meta){sc.x=S.meta.wx;sc.y=S.meta.wy;sc.rot=S.meta.wh}}
+function sceneToMeta(){const sc=nightScene();if(sc)S.meta={wx:sc.x,wy:sc.y,wh:sc.rot}}
+function swapActor(a){sceneToMeta();swapIn(a);metaToScene()}
+function hiddenProps(P0){const h={};for(const id in PROP_DEF)h[id]={...PROP_DEF[id],...(P0[id]||{}),show:false};return h}
+// Với người phụ đã hoán vào S (và S.props đã ẩn): áp keyframe, trả về vị trí/hướng trên sân.
+function castInfo(){
+ const k=S.keys&&S.keys.length?poseAt(S.t):null;let wx=S.meta.wx,wy=S.meta.wy,wh=S.meta.wh;
+ if(k){applyKey(k,S.t,false);const s=k.props&&k.props.scene;if(s){if(typeof s.x==='number')wx=s.x;if(typeof s.y==='number')wy=s.y;if(typeof s.rot==='number')wh=s.rot}}
+ for(const id in S.props)S.props[id].show=false;
+ return {wx,wy,wh};
 }
 function drawCast(target,phase){
  if(inCast||!S.cast||!S.cast.length)return;
- inCast=true;const ref=S.pose.hip[1],OW0=OW,P0=S.props;
+ inCast=true;const OW0=OW,P0=S.props,sc=nightScene();
+ const cam=sc?nightCamera(sc):null,camDeg=cam?cam.yaw*180/Math.PI:0,refDepth=cam?cam.distance:0,ref=S.pose.hip[1];
  try{
-  const items=S.cast.map((a,i)=>({a,i,y:castY(a)})).filter(o=>(phase==='behind')===(o.y<ref)).sort((p,q)=>p.y-q.y);
-  for(const {a,i} of items){
-   swapIn(a);const hid={};for(const id in PROP_DEF)hid[id]={...PROP_DEF[id],...(P0[id]||{}),show:false};S.props=hid;
+  if(sc&&phase==='behind')el('ellipse',{cx:S.pose.hip[0],cy:645,rx:58,ry:9,fill:'#000','fill-opacity':.28},target); // bóng người đang chỉnh
+  const items=[];
+  S.cast.forEach((a,i)=>{
+   swapIn(a);S.props=hiddenProps(P0);let o;
    try{
-    const k=S.keys&&S.keys.length?poseAt(S.t):null;if(k)applyKey(k,S.t,false);
-    const g=el('g',{'data-actor':i},target);renderOne(g,false);uniquifyIds(g,'_c'+i);
+    const inf=castInfo();
+    if(cam){const pt=cam.camera([(inf.wx-300)*.068,0,(640-inf.wy)*.075]);o={a,i,inf,pt,key:pt[2],behind:pt[2]>refDepth,ok:pt[2]>=.65}}
+    else o={a,i,inf,key:S.pose.hip[1],behind:S.pose.hip[1]<ref,ok:true};
+   }finally{S.props=P0;swapIn(a)}
+   items.push(o);
+  });
+  const mine=items.filter(o=>o.ok&&((phase==='behind')===o.behind)).sort((p,q)=>cam?q.key-p.key:p.key-q.key);
+  for(const o of mine){
+   const a=o.a;swapIn(a);S.props=hiddenProps(P0);
+   try{
+    castInfo();
+    let holder=target;
+    if(cam){
+     const [sx,sy]=cam.project(o.pt),s=refDepth/o.pt[2];
+     holder=el('g',{transform:`translate(${sx},${sy}) scale(${s}) translate(-300,-645)`},target);
+     el('ellipse',{cx:300,cy:645,rx:58,ry:9,fill:'#000','fill-opacity':.28},holder);
+     S.pose.hip[0]=300;S.pose.yaw=wrap(camDeg-o.inf.wh);
+    }
+    const g=el('g',{'data-actor':o.i},holder);renderOne(g,false);uniquifyIds(g,'_c'+o.i);
    }finally{S.props=P0;swapIn(a)}
   }
  }finally{inCast=false;OW=OW0}
@@ -2266,18 +2294,18 @@ function syncCast(){
  $('castDel').disabled=!S.cast.length;
 }
 function afterSwap(){syncAll();syncCast();try{renderKeys()}catch{}render()}
-function selectCast(i){swapIn(S.cast[i]);afterSwap()}
+function selectCast(i){swapActor(S.cast[i]);afterSwap()}
 function addCast(opts={}){
  const a={};for(const f of CAST_F)a[f]=structuredClone(S[f]);
- a.keys=[];S.cast.push(a);swapIn(a); // S = bản sao mới (đang chỉnh), a = người trước đó
+ a.keys=[];S.cast.push(a);swapActor(a); // S = bản sao mới (đang chỉnh), a = người trước đó
  const n=S.cast.length,mainX=a.pose.hip[0];
  Object.assign(S.look,{name:'ĐỐI THỦ '+n,num:(S.look.num||9)+n,shirt:'#d62828',numc:'#ffffff',shorts:'#f4f4f4',socks:'#d62828',shoes:'#222222'});
- S.pose.hip=[mainX+(mainX>300?-170:170),S.pose.hip[1]];S.pose.yaw=-(S.pose.yaw||0);
+ if(nightScene()){S.meta={...S.meta,wx:S.meta.wx+44};metaToScene()}else{S.pose.hip=[mainX+(mainX>300?-170:170),S.pose.hip[1]];S.pose.yaw=-(S.pose.yaw||0)}
  if(opts.blank){S.head=EMPTY_HEAD();S.headMeta={};S.face={...FACE_DEF}}
  afterSwap();
 }
 $('castAdd').onclick=()=>addCast();
-$('castDel').onclick=()=>{if(!S.cast.length)return;swapIn(S.cast[0]);S.cast.splice(0,1);afterSwap()};
+$('castDel').onclick=()=>{if(!S.cast.length)return;swapIn(S.cast[0]);metaToScene();S.cast.splice(0,1);afterSwap()};
 $('castJsonBtn').onclick=()=>$('castJson').click();
 async function loadHeads(head){
  const images=VIEWS.flatMap(([,view])=>[['neutral',view,head[view]],...Object.entries(head.expressions||{}).map(([ex,vs])=>[ex,view,vs[view]])]);
@@ -2288,13 +2316,13 @@ $('castJson').onchange=async e=>{
  try{
   const d=JSON.parse(await file.text());
   if(d.head?.src&&!d.head.front)d.head.front=d.head.src;
-  const keep={props:structuredClone(S.props),propCustom:S.propCustom,backdrop:S.backdrop,dur:S.dur,library:S.library,idle:S.idle,loop:S.loop};
+  const keep={props:structuredClone(S.props),propCustom:S.propCustom,backdrop:S.backdrop,dur:S.dur,library:S.library,idle:S.idle,loop:S.loop,sceneX:S.props.scene.x,sceneY:S.props.scene.y,sceneRot:S.props.scene.rot};
   addCast({blank:true});S.body=Object.assign({},DEF_BODY);S.keys=[];
   const mainX=S.cast[S.cast.length-1].pose.hip[0];
   applyState(d);
   Object.assign(S,{propCustom:keep.propCustom,backdrop:keep.backdrop,dur:keep.dur,library:keep.library,idle:keep.idle,loop:keep.loop});
   for(const id in PROP_DEF)S.props[id]=keep.props[id];
-  if(Math.abs(S.pose.hip[0]-mainX)<110)S.pose.hip=[mainX+(mainX>300?-170:170),S.pose.hip[1]];
+  if(nightScene()){const sc=nightScene();S.meta={wx:keep.sceneX+44,wy:keep.sceneY,wh:keep.sceneRot};metaToScene()}else if(Math.abs(S.pose.hip[0]-mainX)<110)S.pose.hip=[mainX+(mainX>300?-170:170),S.pose.hip[1]];
   await loadHeads(S.head);
   afterSwap();
  }catch(err){$('castJsonBtn').textContent='JSON lỗi, chọn lại';setTimeout(()=>$('castJsonBtn').textContent='＋ Thêm diễn viên từ file JSON',2500)}
@@ -2302,7 +2330,7 @@ $('castJson').onchange=async e=>{
 async function restoreCast(list){
  S.cast=[];
  for(const c of (list||[])){
-  const a={pose:clonePose(c.pose),body:Object.assign({},DEF_BODY,c.body),look:c.look,head:Object.assign(EMPTY_HEAD(),c.head),headMeta:{},decals:c.decals||structuredClone(DECAL_DEF),face:Object.assign({},FACE_DEF,c.face),keys:c.keys||[]};
+  const a={meta:Object.assign({wx:300,wy:640,wh:0},c.meta),pose:clonePose(c.pose),body:Object.assign({},DEF_BODY,c.body),look:c.look,head:Object.assign(EMPTY_HEAD(),c.head),headMeta:{},decals:c.decals||structuredClone(DECAL_DEF),face:Object.assign({},FACE_DEF,c.face),keys:c.keys||[]};
   a.head.expressions??={};S.cast.push(a);
   swapIn(a);try{await loadHeads(S.head)}finally{swapIn(a)}
  }
