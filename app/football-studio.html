@@ -1281,7 +1281,8 @@ function drawDefaultHead(g,cx,cy,r,which,f,turn,expression){
 }
 
 // ---- whole-body changes (limbs follow automatically; pinned feet stay put)
-function setYaw(v){keepFeet(()=>{S.pose.yaw=wrap(v)});$('yaw').value=Math.round(S.pose.yaw)}
+function setYaw(v){keepFeet(()=>{S.pose.yaw=wrap(v)});const sc=S.props&&S.props.scene;if(sc&&sc.cam3d>0)sc.rot=(sc.camYaw||0)-S.pose.yaw; // camera thật: ô 'Góc quay' đổi hướng người trên sân (rot), không đổi camera
+ $('yaw').value=Math.round(S.pose.yaw)}
 function setRotation(v){keepFeet(()=>{S.pose.rotFine=wrap(v)});$('rotFine').value=Math.round(S.pose.rotFine)}
 
 // ---- dragging
@@ -2388,6 +2389,7 @@ function render(target=fig,preview=true){
  // Sân đêm 360°: người đang chỉnh luôn đứng đúng tâm xoay (hông ở giữa khung) - muốn dời thì đổi tọa độ sân,
  // nếu không khi xoay camera chân sẽ trượt khỏi điểm đã chỉ định.
  if(nightScene()&&S.nightLock!==false&&S.pose&&S.pose.hip)S.pose.hip[0]=300;
+ {const sc1=S.props&&S.props.scene;if(sc1&&sc1.cam3d>0&&nightScene())S.pose.yaw=wrap((sc1.camYaw||0)-(sc1.rot||0))} // camera thật: người giữ hướng cố định trên sân, xoay camera không kéo người xoay theo
  renderOne(target,preview);drawCast(target,'front');
 }
 // Nút khóa/mở khóa: mở khóa = kéo hông tự do như cũ (chân có thể trượt khi xoay camera);
