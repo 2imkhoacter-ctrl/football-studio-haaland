@@ -15,7 +15,7 @@ const FPS = 24, CUT = 5.95, DUR = 9.15, N = Math.round(DUR * FPS), o = { FPS, N 
 const THETA_A = process.env.VIEW_THETA != null ? +process.env.VIEW_THETA : 0;   // chỉ để thử góc (xem tay sau lưng)
 
 const VINI_FACE = process.env.VINI_FACE != null ? +process.env.VINI_FACE : 225;   // 180 = nhìn thẳng vào máy; 135/225 = nghiêng 3/4 (225: mõm chỉa sang trái)
-const HP = [0, 40], VP = [0, 10];             // chỗ đứng trên sân (mét). Hai người cách xa nhau để cảnh nào cũng không thấy người kia.
+const HP = [0, +(process.env.HP_Z || 46.2)], VP = [0, 10];     // Haaland đứng gần khung thành (z=52.5) để khung thành đủ lớn so với sân             // chỗ đứng trên sân (mét). Hai người cách xa nhau để cảnh nào cũng không thấy người kia.
 const ease = (t, a, b) => S(clamp((t - a) / (b - a), 0, 1));
 const pulse = (t, t0, d) => (t < t0 || t > t0 + d) ? 0 : Math.pow(1 - (t - t0) / d, 2);
 
@@ -31,7 +31,7 @@ function handsBehind(t, key, c) {
 const T1 = { a: 0.3, b: 2.1 }, TURN = { a: 3.1, b: 3.3 }, T2 = { a: 3.3, b: 4.6 }, X0 = -1.3, X1 = 1.3, X2 = -0.5;
 const walkX = (t, a, b, xa, xb, p) => xa + (xb - xa) * (1 - Math.pow(1 - clamp((t - a) / (b - a), 0, 1), p));   // p lớn = đầu rất nhanh, cuối rất chậm
 const posX = t => t < T1.b ? walkX(t, T1.a, T1.b, X0, X1, 2.2) : t < T2.a ? X1 : walkX(t, T2.a, T2.b, X1, X2, 2.0);
-const posList = []; for (let i = 0; i <= N; i++) { const t = i / FPS; posList.push([t, posX(t), 40]); }
+const posList = []; for (let i = 0; i <= N; i++) { const t = i / FPS; posList.push([t, posX(t), HP[1]]); }
 const STOP = [T1.b, T2.b];                       // hai lần dừng: chân giơ lơ lửng rồi DẬM xuống
 
 // ---- Haaland ----
@@ -117,7 +117,7 @@ const shots = [
 const TILT_UP = { a: 5.3, b: 5.75, ty: +(process.env.TILT_TY || 900) };      // camera NGẨNG LÊN trời theo mắt Haaland (dịch khung dọc)
 const camAt = t => { const s = shots.find(x => t >= x[0] && t < x[1]) || shots[shots.length - 1], c = s[2](t), kz = 100 / c.size, up = t < CUT ? ease(t, TILT_UP.a, TILT_UP.b) : 0; return Object.assign({}, c, { ty: c.waist - (645 - 273 * kz) + TILT_UP.ty * up }); };
 
-const heroKeys = buildActor(hero, H.body, H.face, true, o), viniKeys = buildActor(vini, V.body, V.face, true, o);
+const heroKeys = buildActor(hero, H.body, H.face, true, o), viniKeys = buildActor(vini, V.body, Object.assign({}, V.face, { browColor: '#1b1716' }), true, o);   // lông mày đen như tóc Vini
 const base = { show: true, layer: 'back', attach: 'free', style: 'night360', free: 1 };
 const sceneAt = (k, c, tilt) => Object.assign({}, base, { x: r2(toSceneX(k._X)), y: r2(toSceneY(k._Z)), rot: r2(k._wh), tilt: r2(tilt), size: r2(c.size), dof: r2(c.dof), camX: r2(toSceneX(c.cx)), camY: r2(toSceneY(c.cz)), ty: r2(c.ty), camH: 0 });
 heroKeys.forEach(k => { const c = camAt(k.t); k.yaw = r2(wrap(c.theta - k._wh)); k.props = { scene: sceneAt(k, c, c.tilt) }; });
