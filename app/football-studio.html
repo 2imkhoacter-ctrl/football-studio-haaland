@@ -1426,9 +1426,9 @@ function drawFaceBack(g,meta,ix,iy,size,K,view){
  eyes.map((e,i)=>[e,eyes.length===1?Math.max(F.lidL,F.lidR):(i?F.lidR:F.lidL)]).forEach(([e,lid])=>{
   const cx=ix+e.cx*size,cy=iy+e.cy*size,w=e.w*size,h=e.h*size;
   svgn('ellipse',{cx,cy,rx:w*.62,ry:h*.64,fill:'#ffffff'},g);
-  const pr=Math.min(w,h)*.30*F.pupil/100,px=cx+F.lookX/100*w*.22,py=cy+h*.04+F.lookY/100*h*.20;
+  const pr=Math.min(w,h)*.20*F.pupil/100,px=cx+F.lookX/100*w*.26,py=cy-h*.02+F.lookY/100*h*.22;
   svgn('circle',{cx:px,cy:py,r:pr,fill:'#101418'},g);
-  svgn('circle',{cx:px-pr*.32,cy:py-pr*.34,r:pr*.26,fill:'#ffffff'},g);
+  
   if(lid>0){const top=cy-h*.62,bot=top+(h*1.3)*lid/100;
    svgn('rect',{x:cx-w*.7,y:top-h*.2,width:w*1.4,height:bot-(top-h*.2),fill:sk},g);
    svgn('path',{d:`M${cx-w*.55},${bot} Q${cx},${bot+h*.10} ${cx+w*.55},${bot}`,fill:'none',stroke:'#101418','stroke-width':size*.006,'stroke-linecap':'round'},g);}
@@ -1438,11 +1438,10 @@ function drawFaceFront(g,meta,ix,iy,size,K,view){
  const F=Object.assign({},FACE_DEF,S.face),eyes=meta.eyes,lw=size*.0068,hairCol=F.browColor||K.hair||'#c9a227';
  const kind=BROWS[F.browKind]||BROWS.normal,eh=Math.max(...eyes.map(e=>e.h))*size;
  eyes.map((e,i)=>{const j=eyes.length===1?0:i;return [e,kind[j],j?F.browHR:F.browHL]}).forEach(([e,[ho,ang],hs])=>{
-  const cx=ix+e.cx*size,w=e.w*size*1.12,T=Math.max(3,e.h*size*.28*F.browThick/100),cy=iy+e.y0*size-eh*.55+(ho*eh)-hs/100*eh*.4;
-  const arch=F.browKind==='surprised'||F.browKind==='happy'?eh*.18:eh*.06;
-  const d=`M${-w/2},0 Q0,${-arch} ${w/2},0`,tr=`translate(${cx},${cy}) rotate(${ang})`;
-  svgn('path',{d,transform:tr,fill:'none',stroke:'#101418','stroke-width':T+lw*2,'stroke-linecap':'round'},g);
-  svgn('path',{d,transform:tr,fill:'none',stroke:hairCol,'stroke-width':T,'stroke-linecap':'round'},g);
+  const cx=ix+e.cx*size,w=e.w*size*1.12,T=Math.max(3,e.h*size*.22*F.browThick/100),cy=iy+e.y0*size-eh*.55+(ho*eh)-hs/100*eh*.4;
+  const arch=F.browKind==='surprised'||F.browKind==='happy'?eh*.18:eh*.05,s=(eyes.length>1&&e===eyes[1])?-1:1,xi=s*w/2,xo=-s*w/2;
+  const d=`M${xi},${-T/2} Q0,${-arch-T/2} ${xo},${-T*.12} L${xo},${T*.12} Q0,${-arch+T/2} ${xi},${T/2} Z`,tr=`translate(${cx},${cy}) rotate(${ang})`;
+  svgn('path',{d,transform:tr,fill:hairCol,stroke:'#101418','stroke-width':lw*.8,'stroke-linejoin':'round'},g);
  });
  // mouth
  const one=eyes.length===1,e0=eyes[0],e1=eyes[eyes.length-1],sep=one?e0.w*2.0:e1.cx-e0.cx;
@@ -1452,7 +1451,7 @@ function drawFaceFront(g,meta,ix,iy,size,K,view){
  const W=sep*size*(one?.33:.95)*F.mouthScale/100,op=F.mouthOpen/100,k=F.mouthKind,OUTC='#101418',dark='#3d0e12',pink='#e0556a';
  const grp=svgn('g',{transform:`translate(${mx},${my})`},g);
  const line=(d,fill)=>svgn('path',{d,fill:fill||'none',stroke:OUTC,'stroke-width':lw,'stroke-linecap':'round','stroke-linejoin':'round'},grp);
- if(k==='closed')line(`M${-W*.5},0 Q0,${W*.04} ${W*.5},0`);
+ if(k==='closed'){line(`M${-W*.5},${W*.02} Q${-W*.05},${W*.09} ${W*.5},${-W*.03}`);line(`M${W*.5},${-W*.03} q${W*.05},${-W*.01} ${W*.075},${-W*.075}`)}
  else if(k==='smile')line(`M${-W*.5},${-W*.04} Q0,${W*.5} ${W*.5},${-W*.04}`);
  else if(k==='smirk')line(`M${-W*.45},${W*.05} Q${W*.1},${W*.3} ${W*.5},${-W*.12}`);
  else if(k==='sad')line(`M${-W*.4},${W*.12} Q0,${-W*.2} ${W*.4},${W*.12}`);
