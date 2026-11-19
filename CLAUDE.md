@@ -77,3 +77,6 @@ Nhân v?t dang ch?nh luôn ? trong S; các di?n viên khác ? S.cast (m?i ngu?i: pose
 
 ### Di?n viên trên sân dêm 360° (2026-11-19)
 Khi c?nh "sân dêm 360°" (style night360) b?t: camera bám NGU?I ÐANG CH?NH (props.scene.x,y = v? trí mét trên sân, rot = hu?ng). M?i di?n viên có S.meta {wx,wy,wh} (ngu?i ph?) — hoán d?i khi ch?n: ch?n ai thì camera nh?y sang ngu?i dó. Ngu?i ph? chi?u qua cùng camera: v? trí d?ng im trên sân khi xoay camera, nh? d?n theo xa, x?p tru?c/sau theo d? sâu th?t, có bóng elip du?i chân; hu?ng hi?n th? = camDeg - wh. Ngu?i ph? có keyframe thì v? trí l?y t? props.scene.x/y/rot trong key. Chua gi?i: tay chân hai ngu?i ch?ng nhau v?n theo t?ng l?p c? ngu?i (không dan xen).
+
+## Camera th?t (2026-11-19)
+Th? "V?t ph?m & n?n" -> h?p CAMERA. B?t "Dùng camera th?t" (scene.cam3d=1, ch? ? sân dêm 360°): camera d?c l?p (camX/camY di?m nh?m, camYaw, dist, focal, camH, ty, dof); m?i ngu?i co giãn theo focal/(300*d? sâu) nên kh?p t? l? v?i sân. T?t = hành vi cu (m?c d?nh, không d?i hình dã ch?t). Có nút Nh?m vào ngu?i, 4 khung nhanh (toàn c?nh/toàn thân/n?a ngu?i/c?n m?t), luu c?nh (S.shots, n?m trong JSON), c? "key k? ti?p là C?T" (key.cutCam: các tru?ng camera nh?y th?ng thay vì n?i suy). Chua ki?m tra: dùng trong phim d?ng s?n (make_goal_film2.js v?n dùng ch? d? cu), c?t c?nh b?ng UI, xu?t video v?i camera th?t.

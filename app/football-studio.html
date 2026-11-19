@@ -210,7 +210,19 @@ input[type=file]{font-size:12px;max-width:100%}
     <div class="row"><button id="castDel" type="button">🗑 Xóa diễn viên đang chỉnh</button></div>
     <div class="sub">Lưu ý: bóng/cúp gắn vào người đang chỉnh. Diễn viên lưu trong file JSON (Lưu JSON); tự lưu của trình duyệt chỉ giữ nhân vật đang chỉnh.</div>
    </div>
-  <div class="box"><h3>XUẤT / LƯU</h3>
+  <div class="box"><h3>CAMERA (máy quay thật)</h3>
+    <div class="sub">Chỉ hoạt động trên "sân đêm 360°". Bật camera thật thì người và sân co giãn đúng tỉ lệ khi zoom/đổi góc. Tắt thì mọi thứ y như cũ.</div>
+    <div class="row"><label><input id="cam3d" type="checkbox"> Dùng camera thật</label></div>
+    <div id="camBox" hidden>
+     <div class="row"><label>Nhắm vào</label><select id="camTarget"></select><button id="camAim" type="button">Nhắm</button></div>
+     <div class="grid4"><button type="button" data-cp="wide">Toàn cảnh</button><button type="button" data-cp="full">Toàn thân</button><button type="button" data-cp="half">Nửa người</button><button type="button" data-cp="face">Cận mặt</button></div>
+     <div id="camSliders"></div>
+     <div class="row"><label><input id="cutNext" type="checkbox"> Key kế tiếp là CẮT cảnh (camera nhảy thẳng)</label></div>
+     <div class="row"><input id="shotName" type="text" placeholder="Tên cảnh (vd: Cận Vini)"><button id="shotSave" type="button">Lưu khung camera</button></div>
+     <div id="shotList" class="poses"></div>
+    </div>
+   </div>
+   <div class="box"><h3>XUẤT / LƯU</h3>
    <div class="row"><button class="big" id="exPng">Xuất PNG 3× (nền trong suốt)</button></div>
    <div class="row"><label for="exFps">Khung hình/giây</label><select id="exFps"><option>24</option><option selected>30</option><option>60</option></select><button id="exFrames">Xuất dãy PNG</button><button id="exCancel" hidden>Hủy</button></div>
    <div class="sub" id="exportStatus" role="status"></div>
@@ -695,13 +707,13 @@ function renderOne(target=fig,preview=true){
  drawCast(target,'behind');
  {const scn=S.props&&S.props.scene;
   if(scn&&scn.show&&scn.style==='night360'){
-   const kz=100/Math.max(20,scn.size||100),blur=Math.max(0,scn.dof||0)/10;
-   if(kz!==1||blur>0||scn.free>0){
+   const real=scn.cam3d>0,kz=real?1:100/Math.max(20,scn.size||100),blur=Math.max(0,scn.dof||0)/10;
+   if(kz!==1||blur>0||scn.free>0||real){
     let tr=`translate(300 645) scale(${kz}) translate(-300 -645)`,hideActive=false;
-    if(scn.free>0){
+    if(scn.free>0||real){
      const cam=nightCamera(scn),pt=cam.camera([(scn.x-300)*.068,0,(640-scn.y)*.075]);
      if(pt[2]<.65)hideActive=true;
-     else{const [sx,sy]=cam.project(pt),s=cam.distance/pt[2]*kz;tr=`translate(${sx} ${sy}) scale(${s}) translate(-300 -645)`;
+     else{const [sx,sy]=cam.project(pt),s=real?cam.figScale(pt[2]):cam.distance/pt[2]*kz;tr=`translate(${sx} ${sy}) scale(${s}) translate(-300 -645)`;
       svgn('ellipse',{cx:sx,cy:sy,rx:58*s,ry:9*s,fill:'#000','fill-opacity':.28},target);}
     }
     const grp=svgn('g',{transform:tr,style:hideActive?'display:none':''},target);
@@ -1396,7 +1408,7 @@ $('holeAuto').onclick=()=>{S.body.holeAuto=S.body.holeAuto?0:1;syncHoleAuto();re
 // A prop is a drawn object with its own position / size / spin / layer. It is either FREE (stage coordinates) or ATTACHED to a hand / foot
 // (then x,y are an offset from that joint, so the ball follows the kicking foot). Everything is part of the keyframes.
 const PROP_DEF={
- scene:{show:true,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,tilt:10,style:'night360',dof:0,free:0,camX:300,camY:640,ty:0,camH:0},
+ scene:{show:true,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,tilt:10,style:'night360',dof:0,free:0,camX:300,camY:640,ty:0,camH:0,cam3d:0,camYaw:0,dist:2.4,focal:600},
  ball:{show:false,layer:'front',attach:'free',x:430,y:612,size:100,rot:0,style:'png',h:0,fire:0,vx:0,vz:0},
  trophy:{show:false,layer:'front',attach:'free',x:150,y:540,size:100,rot:0,style:'png'},
  goal:{show:false,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,style:'draw'}
@@ -1513,10 +1525,11 @@ PROP_DRAW.scene=function(g,P){
 };const PROP_IMG_OF=id=>(S.propCustom&&S.propCustom[id])||PROP_IMG[id];
 // Camera follows the player across a 105 × 68 m field. All field geometry shares world coordinates.
 function nightCamera(scene) {
- const yaw=rad(scene.rot+(S.pose.yaw||0)),sin=Math.sin(yaw),cos=Math.cos(yaw);
- const free=scene.free>0,x=((free?scene.camX:scene.x)-300)*.068,z=(640-(free?scene.camY:scene.y))*.075;
- const distance=4.8*scene.size/100,focal=570*scene.size/100;
- const height=scene.camH>0?scene.camH:2.8-2.67*Math.max(0,Math.min(1,(scene.tilt||0)/45));
+ const real=scene.cam3d>0; // camera thật: yaw/khoảng cách/tiêu cự/độ cao độc lập với người chơi
+ const yaw=rad(real?(scene.camYaw||0):scene.rot+(S.pose.yaw||0)),sin=Math.sin(yaw),cos=Math.cos(yaw);
+ const free=scene.free>0||real,x=((free?scene.camX:scene.x)-300)*.068,z=(640-(free?scene.camY:scene.y))*.075;
+ const distance=real?(scene.dist||2.4):4.8*scene.size/100,focal=real?(scene.focal||600):570*scene.size/100;
+ const height=scene.camH>0?scene.camH:real?1.5:2.8-2.67*Math.max(0,Math.min(1,(scene.tilt||0)/45));
  const horizon=645-focal*height/distance;
  const camera=([wx,wy,wz])=>[(wx-x)*cos-(wz-z)*sin,wy,(wx-x)*sin+(wz-z)*cos+distance];
  const project=([a,b,d])=>[300+focal*a/d,horizon+focal*(height-b)/d].map(n=>+n.toFixed(2));
@@ -1525,13 +1538,13 @@ function nightCamera(scene) {
   const lateral=(sx-300)*depth/focal,forward=depth-distance;
   return [x+lateral*cos+forward*sin,z-lateral*sin+forward*cos];
  }
- return {yaw,focal,horizon,distance,camera,project,groundAt};
+ return {yaw,focal,horizon,distance,camera,project,groundAt,real,figScale:d=>real?focal/(300*d):null};
 }
 function pitchBallPose(ball,scene){
- const view=nightCamera(scene),radius=26*ball.size/100*view.distance/view.focal;
+ const view=nightCamera(scene),radius=view.real?26*ball.size/100/300:26*ball.size/100*view.distance/view.focal;
  const point=view.camera([ball.x,radius+(ball.h||0),ball.y]);
  if(point[2]<.65)return null;
- return [...view.project(point),ball.size/100*view.distance/point[2],point[2]<=view.distance?'front':'back'];
+ return [...view.project(point),view.real?ball.size/100*view.figScale(point[2]):ball.size/100*view.distance/point[2],point[2]<=view.distance?'front':'back'];
 }
 function drawNightStadium(parent,scene){
  const {yaw,focal,horizon,camera,project}=nightCamera(scene);
@@ -1639,7 +1652,7 @@ function drawNightStadium(parent,scene){
 
 // Hiệu ứng bóng bốc lửa: đuôi lửa kéo ngược hướng bay (vx,vz = vận tốc mét/giây trên sân) + tia lửa tóe ra.
 function drawBallFire(target,P,scene,px,py,scale){
- const view=nightCamera(scene),r=26*P.size/100*view.distance/view.focal,dt=.05;
+ const view=nightCamera(scene),r=view.real?26*P.size/100/300:26*P.size/100*view.distance/view.focal,dt=.05;
  const a=view.project(view.camera([P.x,r+(P.h||0),P.y])),b=view.project(view.camera([P.x-(P.vx||0)*dt,r+(P.h||0),P.y-(P.vz||0)*dt]));
  let dx=b[0]-a[0],dy=b[1]-a[1];const m=Math.hypot(dx,dy);if(m<.01){dx=1;dy=0}else{dx/=m;dy/=m}
  const k=P.fire/100,r0=34*scale,len=(150+260*k)*scale,seed=Math.round(P.x*37+P.y*53+(P.h||0)*91);
@@ -1667,6 +1680,49 @@ function drawProps(target,sol,layer){
   }else if(P.attach!=='free'&&sol[P.attach]){const E=sol[P.attach].E;px=E[0]+P.x;py=E[1]+P.y}
   const g=svgn('g',{transform:`translate(${px},${py}) rotate(${P.rot}) scale(${scale})`},target);if(id==='scene')g.setAttribute('data-night-stadium','');PROP_DRAW[id](g,P)}
 }
+S.shots=S.shots||[];
+// ===== CAMERA THẬT: giao diện =====
+const CAM_SL=[['Khoảng cách tới người (m)','dist',.5,16,.1],['Tiêu cự (nhỏ = góc rộng)','focal',200,1800,10],['Độ cao máy (m)','camH',.2,10,.1],['Góc xoay quanh sân (°)','camYaw',-180,180,1],['Dịch khung lên/xuống (px)','ty',-700,1400,5],['Làm mờ người đang chỉnh','dof',0,100,1]];
+function camInit(){
+ const box=$('camSliders');if(!box||box.children.length)return;
+ for(const [label,key,mn,mx,st] of CAM_SL){
+  const r=document.createElement('div');r.className='row';
+  r.innerHTML=`<label>${label} <b id="cv_${key}">0</b></label><input type="range" id="cs_${key}" min="${mn}" max="${mx}" step="${st}">`;box.appendChild(r);
+  $('cs_'+key).oninput=e=>{S.props.scene[key]=+e.target.value;$('cv_'+key).textContent=e.target.value;render()};
+ }
+ $('cam3d').onchange=e=>{
+  const sc=S.props.scene;sc.cam3d=e.target.checked?1:0;
+  if(e.target.checked){ // bắt đầu từ khung toàn thân quanh người đang chỉnh, không nhảy hình
+   sc.camX=sc.x;sc.camY=sc.y;sc.camH=sc.camH>0?sc.camH:1.3;sc.dist=2.2;sc.focal=600;sc.camYaw=(sc.rot||0)+(S.pose.yaw||0);sc.ty=0;
+  }
+  syncCamUI();render();
+ };
+ $('camAim').onclick=()=>{
+  const v=$('camTarget').value,sc=S.props.scene;
+  if(v==='a'){sc.camX=sc.x;sc.camY=sc.y}else{const a=S.cast[+v];if(a&&a.meta){sc.camX=a.meta.wx;sc.camY=a.meta.wy}}
+  render();
+ };
+ for(const b of document.querySelectorAll('[data-cp]'))b.onclick=()=>{
+  const sc=S.props.scene,p=b.dataset.cp,pre={wide:[8,600,1.6],full:[2.2,600,1.3],half:[1.1,600,1.3],face:[.7,600,1.3]}[p];
+  sc.dist=pre[0];sc.focal=pre[1];sc.camH=pre[2];
+  const fs=pre[1]/(300*pre[0]);sc.ty=(p==='half'||p==='face')?Math.round(240-645+fs*495):0; // đưa mặt lên 1/3 khung
+  syncCamUI();render();
+ };
+ $('cutNext').onchange=e=>{S.cutNext=e.target.checked};
+ $('shotSave').onclick=()=>{
+  const sc=S.props.scene,name=$('shotName').value.trim()||('Cảnh '+(S.shots.length+1));
+  S.shots.push({name,cam:Object.fromEntries(CAM_FIELDS.map(k=>[k,sc[k]]))});$('shotName').value='';syncCamUI();scheduleSave();
+ };
+}
+function syncCamUI(){
+ if(!$('cam3d'))return;camInit();
+ const sc=S.props.scene,on=sc.cam3d>0;
+ $('cam3d').checked=on;$('camBox').hidden=!on;$('cutNext').checked=!!S.cutNext;
+ for(const [,key] of CAM_SL){$('cs_'+key).value=sc[key];$('cv_'+key).textContent=Math.round(sc[key]*10)/10}
+ const sel=$('camTarget'),cur=sel.value;sel.innerHTML='<option value="a">'+S.look.name+' (đang chỉnh)</option>'+(S.cast||[]).map((a,i)=>`<option value="${i}">${a.look.name}</option>`).join('');sel.value=[...sel.options].some(o=>o.value===cur)?cur:'a';
+ const list=$('shotList');list.innerHTML='';
+ S.shots.forEach((s,i)=>{const d=document.createElement('div');const b=document.createElement('button');b.textContent='🎥 '+s.name;b.onclick=()=>{Object.assign(S.props.scene,s.cam);syncCamUI();render()};const x=document.createElement('button');x.textContent='✕';x.onclick=()=>{S.shots.splice(i,1);syncCamUI();scheduleSave()};d.append(b,x);list.appendChild(d)});
+}
 S.propSel=S.propSel||'ball';
 PROP_NAMES.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;$('pkSel').appendChild(o)});
 const PROP_UI=[['Ngang (tự do: toạ độ; gắn: lệch)','x',-200,800],['Cao / thấp (tự do: toạ độ; gắn: lệch)','y',-200,800],['To / nhỏ (%)','size',20,400],['Xoay / lăn (độ)','rot',-720,720]];
@@ -1682,6 +1738,7 @@ $('nightTilt').oninput=e=>{
  render();
 };
 function syncProps(){
+ if(typeof syncCamUI==='function')syncCamUI();
  const P=S.props[S.propSel],night=S.propSel==='scene'&&P.style==='night360';
  const scene=S.props.scene,ballSelected=S.propSel==='ball',locked=ballSelected&&P.attach==='pitch';
  const lockOption=$('pkAttach').querySelector('option[value="pitch"]');
@@ -2234,7 +2291,7 @@ $('headLoad').onclick=autoHeads;
 // browser automatically. On a first visit the character file data/characters/haaland.json is used.
 // Add ?nosave to the address to run without touching the saved state (used for testing).
 const NOSAVE=location.search.includes('nosave'),SAVEKEY='fs_state_v2';
-function stateToSave(){return{v:2,backdrop:S.backdrop,body:S.body,look:S.look,head:{shape:S.head.shape,bundledVini:!!S.head.bundledVini,bundledHaaland:!!S.head.bundledHaaland,size:S.head.size,sink:S.head.sink,rot:S.head.rot,yaw:S.head.yaw,x:S.head.x,y:S.head.y,expression:S.head.expression},library:S.library,decals:S.decals,face:S.face,props:S.props,propCustom:S.propCustom,pose:S.pose,keys:S.keys,dur:S.dur,idle:S.idle,loop:S.loop,bodyLocked:S.bodyLocked}}
+function stateToSave(){return{v:2,backdrop:S.backdrop,body:S.body,look:S.look,head:{shape:S.head.shape,bundledVini:!!S.head.bundledVini,bundledHaaland:!!S.head.bundledHaaland,size:S.head.size,sink:S.head.sink,rot:S.head.rot,yaw:S.head.yaw,x:S.head.x,y:S.head.y,expression:S.head.expression},library:S.library,decals:S.decals,face:S.face,props:S.props,propCustom:S.propCustom,shots:S.shots||[],pose:S.pose,keys:S.keys,dur:S.dur,idle:S.idle,loop:S.loop,bodyLocked:S.bodyLocked}}
 let saveTimer;
 function scheduleSave(){
  if(NOSAVE)return;
@@ -2250,6 +2307,7 @@ function applyState(d){
  if(d.library)S.library=d.library;
  if(d.decals)S.decals=d.decals;
  if(d.face)S.face=Object.assign({},FACE_DEF,d.face);
+ if(Array.isArray(d.shots))S.shots=d.shots;
  if(d.propCustom){S.propCustom=d.propCustom;if(d.propCustom.trophy){const i=new Image();i.onload=()=>{PROP_ASPECT.trophy=i.width/i.height;render()};i.src=d.propCustom.trophy}}
  if(d.props){for(const id in PROP_DEF)S.props[id]=Object.assign({},PROP_DEF[id],d.props[id]||{})}
  if(d.pose)S.pose=clonePose(d.pose);
@@ -2296,9 +2354,9 @@ function drawCast(target,phase){
  inCast=true;const OW0=OW,P0=S.props,sc=nightScene();
  const cam=sc?nightCamera(sc):null,camDeg=cam?cam.yaw*180/Math.PI:0,refDepth=cam?cam.distance:0,ref=S.pose.hip[1];
  try{
-  if(sc&&sc.free<=0&&phase==='behind')el('ellipse',{cx:S.pose.hip[0],cy:645,rx:58*(100/Math.max(20,sc.size||100)),ry:9*(100/Math.max(20,sc.size||100)),fill:'#000','fill-opacity':.28},target); // bóng người đang chỉnh
+  if(sc&&!(sc.free>0||sc.cam3d>0)&&phase==='behind')el('ellipse',{cx:S.pose.hip[0],cy:645,rx:58*(100/Math.max(20,sc.size||100)),ry:9*(100/Math.max(20,sc.size||100)),fill:'#000','fill-opacity':.28},target); // bóng người đang chỉnh
   const items=[];
-  const actDepth=(cam&&sc.free>0)?cam.camera([(sc.x-300)*.068,0,(640-sc.y)*.075])[2]:refDepth;
+  const actDepth=(cam&&(sc.free>0||sc.cam3d>0))?cam.camera([(sc.x-300)*.068,0,(640-sc.y)*.075])[2]:refDepth;
   S.cast.forEach((a,i)=>{
    swapIn(a);S.props=hiddenProps(P0);let o;
    try{
@@ -2315,7 +2373,7 @@ function drawCast(target,phase){
     castInfo();
     let holder=target;
     if(cam){
-     const [sx,sy]=cam.project(o.pt),s=refDepth/o.pt[2]*(100/Math.max(20,sc.size||100));
+     const [sx,sy]=cam.project(o.pt),s=cam.real?cam.figScale(o.pt[2]):refDepth/o.pt[2]*(100/Math.max(20,sc.size||100));
      holder=el('g',{transform:`translate(${sx},${sy}) scale(${s}) translate(-300,-645)`},target);
      el('ellipse',{cx:300,cy:645,rx:58,ry:9,fill:'#000','fill-opacity':.28},holder);
      S.pose.hip[0]=300;S.pose.yaw=wrap(camDeg-o.inf.wh);
@@ -2421,16 +2479,17 @@ render=function(){drawFrame();scheduleSave()};
 S.keys=S.keys||[];S.dur=S.dur||3;S.t=0;S.playing=false;S.idle=false;S.loop=true;
 const ease=u=>u*u*(3-2*u),mix=(a,b,u)=>a+(b-a)*u,mix3=(a,b,u)=>[mix(a[0],b[0],u),mix(a[1],b[1],u),mix(a[2],b[2],u)];
 const angMix=(a,b,u)=>a+wrap(b-a)*u;
-function takeKey(t){const P=S.pose;return{t,hip:P.hip.slice(),type:P.type,rotFine:P.rotFine,yaw:P.yaw,limbs:JSON.parse(JSON.stringify(P.limbs)),poles:JSON.parse(JSON.stringify(P.poles)),ends:JSON.parse(JSON.stringify(P.ends||DEFAULT_POSE().ends)),side:Object.assign({hL:'auto',hR:'auto'},P.armSide||{}),hyaw:S.head.yaw||0,hrot:S.head.rot||0,expression:S.head.expression,face:JSON.parse(JSON.stringify(S.face||FACE_DEF)),props:JSON.parse(JSON.stringify(S.props))}}
+function takeKey(t){const P=S.pose;const cutCam=!!S.cutNext;S.cutNext=false;if(typeof syncCamUI==='function')syncCamUI();return{cutCam,t,hip:P.hip.slice(),type:P.type,rotFine:P.rotFine,yaw:P.yaw,limbs:JSON.parse(JSON.stringify(P.limbs)),poles:JSON.parse(JSON.stringify(P.poles)),ends:JSON.parse(JSON.stringify(P.ends||DEFAULT_POSE().ends)),side:Object.assign({hL:'auto',hR:'auto'},P.armSide||{}),hyaw:S.head.yaw||0,hrot:S.head.rot||0,expression:S.head.expression,face:JSON.parse(JSON.stringify(S.face||FACE_DEF)),props:JSON.parse(JSON.stringify(S.props))}}
 function poseAt(t){
  const ks=[...S.keys].sort((a,b)=>a.t-b.t);if(!ks.length)return null;
  if(t<=ks[0].t)return ks[0];if(t>=ks[ks.length-1].t)return ks[ks.length-1];
  let i=0;while(ks[i+1].t<=t)i++;const A=ks[i],B=ks[i+1],raw=(t-A.t)/(B.t-A.t||1),u=A.lin?raw:ease(raw); // lin:true keys (densely sampled animations) are not eased again
  const L={},Q={},E={},z=DEFAULT_POSE().ends;for(const k of ['hL','hR','fL','fR']){L[k]=mix3(A.limbs[k],B.limbs[k],u);Q[k]=mix3(A.poles[k],B.poles[k],u);
   const ea=(A.ends||z)[k]||[0,0],eb=(B.ends||z)[k]||[0,0];E[k]=[mix(ea[0],eb[0],u),mix(ea[1],eb[1],u),mix(ea[2]||0,eb[2]||0,u),mix(ea[3]||0,eb[3]||0,u)]}
- return{t,ends:E,side:u<.5?A.side:B.side,hip:[mix(A.hip[0],B.hip[0],u),mix(A.hip[1],B.hip[1],u)],type:u<.5?A.type:B.type,rotFine:angMix(A.rotFine,B.rotFine,u),yaw:angMix(A.yaw,B.yaw,u),limbs:L,poles:Q,hyaw:angMix(A.hyaw,B.hyaw,u),hrot:angMix(A.hrot,B.hrot,u),expression:A.expression,face:mixFace(A.face,B.face,u),props:mixProps(A.props,B.props,u)};
+ return{t,ends:E,side:u<.5?A.side:B.side,hip:[mix(A.hip[0],B.hip[0],u),mix(A.hip[1],B.hip[1],u)],type:u<.5?A.type:B.type,rotFine:angMix(A.rotFine,B.rotFine,u),yaw:angMix(A.yaw,B.yaw,u),limbs:L,poles:Q,hyaw:angMix(A.hyaw,B.hyaw,u),hrot:angMix(A.hrot,B.hrot,u),expression:A.expression,face:mixFace(A.face,B.face,u),props:mixProps(A.props,B.props,u,B.cutCam)};
 }
-function mixProps(a,b,u){const o={};for(const id in PROP_DEF){const x=Object.assign({},PROP_DEF[id],(a||{})[id]),y=Object.assign({},PROP_DEF[id],(b||{})[id]);o[id]={};for(const k in PROP_DEF[id])o[id][k]=(typeof PROP_DEF[id][k]==='number')?mix(x[k],y[k],u):(u<.5?x[k]:y[k]);if(x.attach!==y.attach&&(x.attach==='pitch'||y.attach==='pitch')){const anchor=u<.5?x:y;o[id].x=anchor.x;o[id].y=anchor.y}}return o}
+const CAM_FIELDS=['camX','camY','camYaw','dist','focal','camH','ty','size','tilt','free','cam3d','dof'];
+function mixProps(a,b,u,cut){const o={};for(const id in PROP_DEF){const x=Object.assign({},PROP_DEF[id],(a||{})[id]),y=Object.assign({},PROP_DEF[id],(b||{})[id]);o[id]={};for(const k in PROP_DEF[id])o[id][k]=(cut&&id==='scene'&&CAM_FIELDS.includes(k))?x[k]:(typeof PROP_DEF[id][k]==='number')?mix(x[k],y[k],u):(u<.5?x[k]:y[k]);if(x.attach!==y.attach&&(x.attach==='pitch'||y.attach==='pitch')){const anchor=u<.5?x:y;o[id].x=anchor.x;o[id].y=anchor.y}}return o}
 function mixFace(a,b,u){a=Object.assign({},FACE_DEF,a||{});b=Object.assign({},FACE_DEF,b||{});const o={};for(const k in FACE_DEF){o[k]=(typeof FACE_DEF[k]==='number')?mix(a[k],b[k],u):(u<.5?a[k]:b[k])}o.on=a.on;return o}
 function applyKey(k,t,animate=S.playing){
  const P=S.pose;P.hip=k.hip.slice();P.type=k.type;P.rotFine=k.rotFine;P.yaw=k.yaw;
@@ -3076,7 +3135,7 @@ window.__S=S;window.__render=render;window.__last=()=>last;
   ['char','👤','Cầu thủ',[['CẦU THỦ','⭐'],['THÂN HÌNH','📏']]],
   ['head','🙂','Đầu & mặt',[['CHỈNH HÌNH ĐẦU','🎨'],['KHUÔN MẶT VECTOR','👀'],['ĐẦU (ảnh','🖼️']]],
   ['kit','👕','Áo quần',[['IN TRÊN ÁO','🔢']]],
-  ['prop','⚽','Vật phẩm & nền',[['VẬT PHẨM','🏆'],['NỀN XEM TRƯỚC','🌤️']]],
+  ['prop','⚽','Vật phẩm & nền',[['VẬT PHẨM','🏆'],['CAMERA','🎥'],['NỀN XEM TRƯỚC','🌤️']]],
   ['cast','🎭','Diễn viên',[['DIỄN VIÊN','🎭']]],
   ['anim','🎬','Hoạt hình',[['HOẠT HÌNH','🎞️']]],
   ['save','💾','Xuất / Lưu',[['XUẤT / LƯU','📤']]]
