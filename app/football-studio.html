@@ -2201,6 +2201,13 @@ function siuWarp(ig,meta,href,ix,iy,size,view){
  const uid=(siuWarp.n=(siuWarp.n||0)+1),defs=svgn('defs',{},ig),img=svgn('image',{id:'siuHead'+uid,x:ix,y:iy,width:size,height:size,preserveAspectRatio:'xMidYMid meet'},defs);
  img.setAttribute('href',href);img.setAttributeNS('http://www.w3.org/1999/xlink','href',href);
  const top=yc-hb,n=Math.max(16,Math.min(120,Math.round(2*hb/.7))),dy=2*hb/n;
+ const gr=svgn('linearGradient',{id:'siuGr'+uid,gradientUnits:'userSpaceOnUse',x1:(ix+Math.max(0,siuEdge(meta,iy,size,G.my))*size)-.36*G.W,x2:(ix+Math.max(0,siuEdge(meta,iy,size,G.my))*size)-.1*G.W,y1:0,y2:0},defs);
+ svgn('stop',{offset:0,'stop-color':'#000'},gr);svgn('stop',{offset:1,'stop-color':'#fff'},gr);
+ const mk=svgn('mask',{id:'siuMk'+uid,maskUnits:'userSpaceOnUse',x:ix,y:top-4,width:size,height:2*hb+8},defs);
+ svgn('rect',{x:ix,y:top-4,width:size,height:2*hb+8,fill:'url(#siuGr'+uid+')'},mk);
+ const fl=svgn('filter',{id:'siuTint'+uid,x:'-5%',y:'-5%',width:'110%',height:'110%'},defs);
+ svgn('feFlood',{'flood-color':'#ffd3c8','flood-opacity':.82,result:'f'},fl);svgn('feComposite',{in:'f',in2:'SourceAlpha',operator:'in'},fl);
+ const tint=svgn('g',{mask:'url(#siuMk'+uid+')',filter:'url(#siuTint'+uid+')'},ig);
  for(let i=0;i<n;i++){
   const y0=top+i*dy,ym=y0+dy/2,u=(ym-yc)/hb,p=1-Math.pow(Math.min(1,Math.abs(u)),2.3);   // phồng tròn, đỉnh phẳng rộng
   let er=0,cnt=0;for(const o of [-2,-1,0,1,2]){const e=siuEdge(meta,iy,size,ym+o*size/256);if(e>=0){er+=e;cnt++}}if(!cnt)continue;er/=cnt;   // làm mịn viền
@@ -2208,7 +2215,12 @@ function siuWarp(ig,meta,href,ix,iy,size,view){
   const sc=(span+p*G.Lp)/span,h=dy+.8;
   const sv=svgn('svg',{x:x0,y:y0,width:wIn*sc,height:h,viewBox:`${x0} ${y0} ${wIn} ${h}`,preserveAspectRatio:'none',overflow:'hidden'},ig);
   const u2=svgn('use',{},sv);u2.setAttribute('href','#siuHead'+uid);u2.setAttributeNS('http://www.w3.org/1999/xlink','href','#siuHead'+uid);
+  if(p>.25){ // lớp tô hồng nhạt: cùng hình dạng đầu đã kéo, đậm dần về đầu mõm
+   const sv2=svgn('svg',{x:x0,y:y0,width:wIn*sc,height:h,viewBox:`${x0} ${y0} ${wIn} ${h}`,preserveAspectRatio:'none',overflow:'hidden',opacity:Math.min(1,Math.pow(p,1.6)*1.5)},tint);
+   const u3=svgn('use',{},sv2);u3.setAttribute('href','#siuHead'+uid);u3.setAttributeNS('http://www.w3.org/1999/xlink','href','#siuHead'+uid);
+  }
  }
+ ig.appendChild(tint); // lớp tô hồng nằm trên cùng
 }
 function drawFaceFront(g,meta,ix,iy,size,K,view){
  const outerG=g; // kiểu miệng 'siu' nhô ra ngoài viền đầu nên vẽ ngoài lớp cắt
@@ -2247,22 +2259,20 @@ function drawFaceFront(g,meta,ix,iy,size,K,view){
   svgn('line',{x1:-W*.4,y1:h/2,x2:W*.4,y2:h/2,stroke:OUTC,'stroke-width':lw*.7},grp);for(const f of [-.2,0,.2])svgn('line',{x1:W*f,y1:0,x2:W*f,y2:h,stroke:OUTC,'stroke-width':lw*.7},grp);}
  else if(k==='tongue'){svgn('path',{d:`M${-W*.16},${W*.1} q0,${W*(.18+.2*op)} ${W*.16},${W*(.18+.2*op)} q${W*.16},0 ${W*.16},${-W*(.18+.2*op)} Z`,fill:pink,stroke:OUTC,'stroke-width':lw,'stroke-linejoin':'round'},grp);
   line(`M${-W*.5},${-W*.04} Q0,${W*.5} ${W*.5},${-W*.04}`);}
- else if(k==='siu'){ // môi CHU "uuu": nhìn nghiêng thì ĐẦU được kéo nhô ra (siuWarp) và ở đây chỉ vẽ đầu mõm; nhìn thẳng là khối tròn phồng có bóng
-  const sk=meta.skin||K.skin,warped=view!=='front'&&meta.edgeR&&meta.edgeR.length,yb=W*.12,rb=W*(.3+.03*op),rt=W*(.22+.03*op);
-  if(view==='front'||!(meta.edgeR&&meta.edgeR.length)&&view==='front'){
-   svgn('ellipse',{cx:0,cy:yb+W*.05,rx:W*.47,ry:W*.37,fill:'#000','fill-opacity':.17},grp);
-   svgn('ellipse',{cx:0,cy:yb,rx:W*.39,ry:W*.3,fill:sk,stroke:OUTC,'stroke-width':lw*1.3},grp);
-   svgn('ellipse',{cx:0,cy:yb,rx:W*.3,ry:W*.22,fill:pink,'fill-opacity':.42,stroke:OUTC,'stroke-width':lw*.7,'stroke-opacity':.7},grp);
-   svgn('ellipse',{cx:0,cy:yb,rx:W*(.1+.05*op),ry:W*(.08+.15*op),fill:dark,stroke:OUTC,'stroke-width':lw},grp);
-   svgn('ellipse',{cx:-W*.13,cy:yb-W*.14,rx:W*.09,ry:W*.035,fill:'#fff','fill-opacity':.4},grp);
-   for(const sx of [-1,1])svgn('path',{d:`M${sx*W*.45},${yb-W*.1} q${sx*W*.07},${W*.08} 0,${W*.2}`,fill:'none',stroke:OUTC,'stroke-width':lw*.8,'stroke-linecap':'round','stroke-opacity':.6},grp);
-  }else if(warped){ // đầu mõm đặt đúng đỉnh chỗ đầu bị kéo ra
+ else if(k==='siu'){ // môi CHU "uuu": KHÔNG viền. Nhìn nghiêng: đầu được kéo nhô ra (siuWarp), ở đây tô phần mõm hồng nhạt + lỗ tối; nhìn thẳng: khối tròn phồng đổ bóng
+  const sk=meta.skin||K.skin,warped=view!=='front'&&meta.edgeR&&meta.edgeR.length,yb=W*.12,light='#ffd9cf',rim='#f0a3a0',hole='#4a1519';
+  if(view==='front'){
+   svgn('ellipse',{cx:0,cy:yb+W*.05,rx:W*.47,ry:W*.37,fill:'#000','fill-opacity':.16},grp);
+   svgn('ellipse',{cx:0,cy:yb,rx:W*.39,ry:W*.3,fill:sk},grp);
+   svgn('ellipse',{cx:0,cy:yb,rx:W*.36,ry:W*.27,fill:light,'fill-opacity':.5},grp);
+   svgn('ellipse',{cx:0,cy:yb,rx:W*(.15+.05*op),ry:W*(.12+.15*op),fill:rim},grp);
+   svgn('ellipse',{cx:0,cy:yb,rx:W*(.1+.05*op),ry:W*(.08+.15*op),fill:hole},grp);
+  }else if(warped){ // phần mõm tô hồng nhạt trùm lên chỗ đầu bị kéo ra
    const G=siuGeom(meta,ix,iy,size,view),er=siuEdge(meta,iy,size,G.my);
    if(er>=0){
-    const tipX=ix+er*size+G.Lp-mx,trx=W*(one?.12:.17),try_=W*.27,cx=tipX-trx*.45,cy=W*.05;
-    svgn('ellipse',{cx,cy,rx:trx,ry:try_,fill:pink,'fill-opacity':.55,stroke:OUTC,'stroke-width':lw*1.3},grp);
-    svgn('ellipse',{cx:cx+trx*.12,cy,rx:trx*.58,ry:try_*(.38+.3*op),fill:dark,stroke:OUTC,'stroke-width':lw},grp);
-    svgn('ellipse',{cx:cx-trx*.3,cy:cy-try_*.55,rx:trx*.4,ry:try_*.14,fill:'#fff','fill-opacity':.35},grp);
+    const tipX=ix+er*size+G.Lp-mx,len=G.Lp+W*.34,ry0=W*.3,cx=tipX-len*.5,cy=W*.05;
+    svgn('ellipse',{cx:tipX-W*.08,cy,rx:W*(one?.12:.16),ry:W*.24,fill:rim,'fill-opacity':.85},grp);  // quầng quanh lỗ
+    svgn('ellipse',{cx:tipX-W*.04,cy,rx:W*(one?.075:.1),ry:W*(.12+.1*op),fill:hole},grp);             // lỗ tối
    }
   }
  }
