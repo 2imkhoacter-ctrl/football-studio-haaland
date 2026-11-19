@@ -262,11 +262,21 @@ function ik3(a,t,l1,l2,pole){
  const A=Math.acos(Math.max(-1,Math.min(1,(l1*l1+dd*dd-l2*l2)/(2*l1*dd))));
  return [add3(a,add3(mul3(u,l1*Math.cos(A)),mul3(p,l1*Math.sin(A)))),add3(a,mul3(u,dd))];
 }
-function solve(k){
+// Depth of the torso / shorts surface at height y and sideways x (body frame), front or back (back includes the glutes).
+function torsoSurf(x,y,side){
+ const B=S.body,sy=TORSOS[S.pose.type].sy,th=B.torsoH,lerp=(a,b,u)=>a+(b-a)*Math.max(0,Math.min(1,u));
+ const yc=-th*.68*sy,yw=-th*.18*sy,yh=(30+(B.gap||0))*sy;
+ const lv=[[yc,B.chest,B.chest*B.depthK/100],[yw,B.waist,B.waist*B.depthW/100],[yh,B.hipW,B.hipW*(B.depthH+(side==='back'?(B.gluteDepth||0):0))/100]];
+ let W,D;
+ if(y<=lv[0][0]){W=lv[0][1];D=lv[0][2]}
+ else if(y>=lv[2][0]){W=lv[2][1];D=lv[2][2]}
+ else{const i=y<lv[1][0]?0:1,u=(y-lv[i][0])/(lv[i+1][0]-lv[i][0]);W=lerp(lv[i][1],lv[i+1][1],u);D=lerp(lv[i][2],lv[i+1][2],u)}
+ return D*Math.sqrt(Math.max(0,1-(x/(W*1.05))**2));
+}function solve(k){
  const a=anchor3(LIMB[k]),[l1,l2]=LEN[k],pole=S.pose.poles[k]||POLE[k];
  // "Sau lưng" / "Trước ngực" keep the hand behind the back / in front of the chest at all times (also after dragging or loading old files)
  let tgt=S.pose.limbs[k];const side=k[0]==='h'&&(S.pose.armSide||{})[k];
- if(side==='back'||side==='front'){const B=S.body,d=Math.max(B.chest*B.depthK,B.waist*B.depthW)/100+B.hand*.9+4;tgt=[tgt[0],tgt[1],side==='back'?Math.min(tgt[2],-d):Math.max(tgt[2],d)]}
+ if(side==='back'||side==='front'){const B=S.body,d=torsoSurf(a[0]+tgt[0],a[1]+tgt[1],side)+B.hand*.45+2;tgt=[tgt[0],tgt[1],side==='back'?Math.min(tgt[2],-d):Math.max(tgt[2],d)]}
  let [j,e]=ik3(a,add3(a,tgt),l1,l2,pole);
  if(k[0]==='f'){ // a foot never goes under the ground line
   const pe=project(e);
@@ -1132,9 +1142,9 @@ $('endReset').onclick=()=>{if(!S.pose.ends)S.pose.ends=DEFAULT_POSE().ends;S.pos
 // "Sau lưng" / "Trước ngực" also move the HAND in depth: behind the back / in front of the chest (front-view dragging can't set depth).
 function armDepthFor(k,v){
  const B=S.body,L=S.pose.limbs[k];if(!L)return;
- const d=Math.max(B.chest*B.depthK,B.waist*B.depthW)/100+B.hand*.9+4;
- if(v==='back'&&L[2]>-d)L[2]=-d;
- if(v==='front'&&L[2]<d)L[2]=d;
+ const a=anchor3(LIMB[k]),d=torsoSurf(a[0]+L[0],a[1]+L[1],v)+B.hand*.45+2;
+ if(v==='back')L[2]=-d;
+ if(v==='front')L[2]=d;
 }function syncSide(){const as=S.pose.armSide||{};document.querySelectorAll('#sideRows .grid4').forEach(r=>[...r.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.v===(as[r.dataset.k]||'auto'))))}
 function syncHoleAuto(){$('holeAuto').textContent='Cổ áo tự khớp cổ đầu: '+(S.body.holeAuto?'BẬT':'TẮT');$('holeAuto').classList.toggle('on',!!S.body.holeAuto)}
 $('holeAuto').onclick=()=>{S.body.holeAuto=S.body.holeAuto?0:1;syncHoleAuto();render()};
