@@ -200,6 +200,14 @@ input[type=file]{font-size:12px;max-width:100%}
    <div class="row"><label>Dịch dọc</label><input type="range" id="hY" min="-60" max="60" value="0"></div>
    <div class="row"><button id="clearHead">Xóa ảnh đầu, dùng đầu mặc định</button></div>
   </div>
+  <div class="box"><h3>DIỄN VIÊN (đối thủ, đồng đội...)</h3>
+    <div class="sub">Mỗi diễn viên là một nhân vật riêng (tư thế, màu áo, đầu, tên, số). Bấm tên để chọn rồi chỉnh bằng các thẻ khác như bình thường. Ai đứng xa (hông cao hơn trên màn hình) được vẽ phía sau.</div>
+    <div id="castList" style="display:flex;flex-direction:column;gap:6px;margin:8px 0"></div>
+    <div class="row"><button id="castAdd" type="button" class="big">＋ Thêm diễn viên (nhân bản người đang chỉnh)</button></div>
+    <div class="row"><button id="castJsonBtn" type="button">＋ Thêm diễn viên từ file JSON</button><input type="file" id="castJson" accept=".json" hidden></div>
+    <div class="row"><button id="castDel" type="button">🗑 Xóa diễn viên đang chỉnh</button></div>
+    <div class="sub">Lưu ý: bóng/cúp gắn vào người đang chỉnh. Diễn viên lưu trong file JSON (Lưu JSON); tự lưu của trình duyệt chỉ giữ nhân vật đang chỉnh.</div>
+   </div>
   <div class="box"><h3>XUẤT / LƯU</h3>
    <div class="row"><button class="big" id="exPng">Xuất PNG 3× (nền trong suốt)</button></div>
    <div class="row"><label for="exFps">Khung hình/giây</label><select id="exFps"><option>24</option><option selected>30</option><option>60</option></select><button id="exFrames">Xuất dãy PNG</button><button id="exCancel" hidden>Hủy</button></div>
@@ -676,12 +684,13 @@ function drawLayer(parent,items){
 }
 
 let last={};
-function render(target=fig,preview=true){
+function renderOne(target=fig,preview=true){
  const P=S.pose,K=S.look,B=S.body,V=view(),A=anchors(),T=TORSOS[P.type],pr=planeRot();
  OW=2.1*(B.ow||100)/100;
  target.replaceChildren();
  const sol={fL:solve('fL'),fR:solve('fR'),hL:solve('hL'),hR:solve('hR')};
  drawProps(target,sol,'back');
+ drawCast(target,'behind');
  const joints={hL:sol.hL.E,hR:sol.hR.E,fL:sol.fL.E,fR:sol.fR.E,jhL:sol.hL.J,jhR:sol.hR.J,jfL:sol.fL.J,jfR:sol.fR.J};
  const depth=s=>(s.A.z+s.J.z*2+s.E.z)/4;
 
@@ -1919,7 +1928,7 @@ $('exFrames').onclick=async()=>{
  }catch(err){status.textContent=err.name==='AbortError'?'Đã đóng hộp chọn thư mục.':`Lỗi xuất sau ${written} PNG: ${err.message}`}
  finally{button.disabled=false;cancel.hidden=true}
 };
-$('exJson').onclick=()=>saveJSON('football-studio.json',{...stateToSave(),v:4,head:S.head});
+$('exJson').onclick=()=>saveJSON('football-studio.json',{...stateToSave(),v:4,head:S.head,cast:S.cast.map(a=>({pose:a.pose,body:a.body,look:a.look,head:a.head,decals:a.decals,face:a.face,keys:a.keys}))});
 $('imJson').onclick=()=>$('jsonFile').click();
 $('jsonFile').onchange=async e=>{
  const [file]=e.target.files;e.target.value='';
@@ -1937,7 +1946,8 @@ $('jsonFile').onchange=async e=>{
   await Promise.allSettled(images.filter(([, ,src])=>src).map(([expression,view,src])=>loadHeadImage(head,expression,view,src)));
   $('tSlider').max=S.dur;$('tDur').value=S.dur;
   $('tIdle').classList.toggle('on',S.idle);$('tLoop').classList.toggle('on',S.loop);
-  syncAll();renderLib();renderKeys();render();
+  await restoreCast(d.cast);
+  syncAll();renderLib();renderKeys();syncCast();render();
  }catch{
   $('imJson').textContent='JSON lỗi, chọn lại';setTimeout(()=>$('imJson').textContent='Nạp JSON',2500);
  }
@@ -2207,6 +2217,96 @@ function applyState(d){
  if('idle' in d)S.idle=!!d.idle;
  if('loop' in d)S.loop=d.loop!==false;
  if('bodyLocked' in d)S.bodyLocked=d.bodyLocked!==false;
+}
+// ======================= NHIỀU DIỄN VIÊN (đối thủ, đồng đội...) =======================
+// Nhân vật đang chỉnh luôn nằm trong S. Các diễn viên khác nằm trong S.cast (mỗi người một bộ pose/body/look/head...).
+// Vẽ: ai đứng xa (hông cao hơn trên màn hình) vẽ trước, ai gần vẽ sau. Chọn diễn viên = hoán đổi dữ liệu vào S.
+if(!S.cast)S.cast=[];
+const CAST_F=['pose','body','look','head','headMeta','decals','face','keys'];
+let inCast=false;
+function swapIn(a){for(const f of CAST_F){const x=S[f];S[f]=a[f];a[f]=x}}
+function uniquifyIds(g,tag){
+ const els=[g,...g.querySelectorAll('*')],ids=new Set();
+ for(const e of els)if(e.id)ids.add(e.id);
+ if(!ids.size)return;
+ const rn=s=>s.replace(/url\(#([^)]+)\)/g,(m,i)=>ids.has(i)?'url(#'+i+tag+')':m);
+ for(const e of els)for(const at of [...e.attributes]){
+  const v=at.value;
+  if(at.name==='id'){e.setAttribute('id',v+tag)}
+  else if((at.localName==='href')&&v[0]==='#'&&ids.has(v.slice(1))){e.setAttributeNS(at.namespaceURI,at.name,'#'+v.slice(1)+tag)}
+  else if(v.includes('url(#'))e.setAttribute(at.name,rn(v));
+ }
+}
+function castY(a){
+ swapIn(a);const P0=S.props,hid={};for(const id in PROP_DEF)hid[id]={...PROP_DEF[id],...(P0[id]||{}),show:false};S.props=hid;
+ let y;try{const k=S.keys&&S.keys.length?poseAt(S.t):null;if(k)applyKey(k,S.t,false);y=S.pose.hip[1]}finally{S.props=P0;swapIn(a)}
+ return y;
+}
+function drawCast(target,phase){
+ if(inCast||!S.cast||!S.cast.length)return;
+ inCast=true;const ref=S.pose.hip[1],OW0=OW,P0=S.props;
+ try{
+  const items=S.cast.map((a,i)=>({a,i,y:castY(a)})).filter(o=>(phase==='behind')===(o.y<ref)).sort((p,q)=>p.y-q.y);
+  for(const {a,i} of items){
+   swapIn(a);const hid={};for(const id in PROP_DEF)hid[id]={...PROP_DEF[id],...(P0[id]||{}),show:false};S.props=hid;
+   try{
+    const k=S.keys&&S.keys.length?poseAt(S.t):null;if(k)applyKey(k,S.t,false);
+    const g=el('g',{'data-actor':i},target);renderOne(g,false);uniquifyIds(g,'_c'+i);
+   }finally{S.props=P0;swapIn(a)}
+  }
+ }finally{inCast=false;OW=OW0}
+}
+function render(target=fig,preview=true){renderOne(target,preview);drawCast(target,'front')}
+const EMPTY_HEAD=()=>({expression:'neutral',expressions:{},front:null,q45:null,side:null,q135:null,back:null,size:200,sink:34,rot:0,yaw:0,x:0,y:0});
+function syncCast(){
+ const box=$('castList');if(!box)return;box.innerHTML='';
+ const mk=(label,active,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;if(active)b.className='on';b.onclick=fn;box.appendChild(b)};
+ mk('★ '+S.look.name+' (đang chỉnh)',true,()=>{});
+ S.cast.forEach((a,i)=>mk('👤 '+a.look.name+' — bấm để chỉnh',false,()=>selectCast(i)));
+ $('castDel').disabled=!S.cast.length;
+}
+function afterSwap(){syncAll();syncCast();try{renderKeys()}catch{}render()}
+function selectCast(i){swapIn(S.cast[i]);afterSwap()}
+function addCast(opts={}){
+ const a={};for(const f of CAST_F)a[f]=structuredClone(S[f]);
+ a.keys=[];S.cast.push(a);swapIn(a); // S = bản sao mới (đang chỉnh), a = người trước đó
+ const n=S.cast.length,mainX=a.pose.hip[0];
+ Object.assign(S.look,{name:'ĐỐI THỦ '+n,num:(S.look.num||9)+n,shirt:'#d62828',numc:'#ffffff',shorts:'#f4f4f4',socks:'#d62828',shoes:'#222222'});
+ S.pose.hip=[mainX+(mainX>300?-170:170),S.pose.hip[1]];S.pose.yaw=-(S.pose.yaw||0);
+ if(opts.blank){S.head=EMPTY_HEAD();S.headMeta={};S.face={...FACE_DEF}}
+ afterSwap();
+}
+$('castAdd').onclick=()=>addCast();
+$('castDel').onclick=()=>{if(!S.cast.length)return;swapIn(S.cast[0]);S.cast.splice(0,1);afterSwap()};
+$('castJsonBtn').onclick=()=>$('castJson').click();
+async function loadHeads(head){
+ const images=VIEWS.flatMap(([,view])=>[['neutral',view,head[view]],...Object.entries(head.expressions||{}).map(([ex,vs])=>[ex,view,vs[view]])]);
+ await Promise.allSettled(images.filter(([, ,src])=>src).map(([ex,view,src])=>loadHeadImage(head,ex,view,src)));
+}
+$('castJson').onchange=async e=>{
+ const [file]=e.target.files;e.target.value='';if(!file)return;
+ try{
+  const d=JSON.parse(await file.text());
+  if(d.head?.src&&!d.head.front)d.head.front=d.head.src;
+  const keep={props:structuredClone(S.props),propCustom:S.propCustom,backdrop:S.backdrop,dur:S.dur,library:S.library,idle:S.idle,loop:S.loop};
+  addCast({blank:true});S.body=Object.assign({},DEF_BODY);S.keys=[];
+  const mainX=S.cast[S.cast.length-1].pose.hip[0];
+  applyState(d);
+  Object.assign(S,{propCustom:keep.propCustom,backdrop:keep.backdrop,dur:keep.dur,library:keep.library,idle:keep.idle,loop:keep.loop});
+  for(const id in PROP_DEF)S.props[id]=keep.props[id];
+  if(Math.abs(S.pose.hip[0]-mainX)<110)S.pose.hip=[mainX+(mainX>300?-170:170),S.pose.hip[1]];
+  await loadHeads(S.head);
+  afterSwap();
+ }catch(err){$('castJsonBtn').textContent='JSON lỗi, chọn lại';setTimeout(()=>$('castJsonBtn').textContent='＋ Thêm diễn viên từ file JSON',2500)}
+};
+async function restoreCast(list){
+ S.cast=[];
+ for(const c of (list||[])){
+  const a={pose:clonePose(c.pose),body:Object.assign({},DEF_BODY,c.body),look:c.look,head:Object.assign(EMPTY_HEAD(),c.head),headMeta:{},decals:c.decals||structuredClone(DECAL_DEF),face:Object.assign({},FACE_DEF,c.face),keys:c.keys||[]};
+  a.head.expressions??={};S.cast.push(a);
+  swapIn(a);try{await loadHeads(S.head)}finally{swapIn(a)}
+ }
+ syncCast();
 }
 const drawFrame=render;
 render=function(){drawFrame();scheduleSave()};
@@ -2850,6 +2950,7 @@ window.__S=S;window.__render=render;window.__last=()=>last;
   ['head','🙂','Đầu & mặt',[['CHỈNH HÌNH ĐẦU','🎨'],['KHUÔN MẶT VECTOR','👀'],['ĐẦU (ảnh','🖼️']]],
   ['kit','👕','Áo quần',[['IN TRÊN ÁO','🔢']]],
   ['prop','⚽','Vật phẩm & nền',[['VẬT PHẨM','🏆'],['NỀN XEM TRƯỚC','🌤️']]],
+  ['cast','🎭','Diễn viên',[['DIỄN VIÊN','🎭']]],
   ['anim','🎬','Hoạt hình',[['HOẠT HÌNH','🎞️']]],
   ['save','💾','Xuất / Lưu',[['XUẤT / LƯU','📤']]]
  ];
