@@ -2219,11 +2219,11 @@ $('tLoop').onclick=e=>{S.loop=!S.loop;e.target.classList.toggle('on',S.loop);sch
 
 const HEAD_SHAPE={enabled:false,width:100,height:100,cheek:100,jaw:87,chin:0,ear:100,earY:0,eyeY:0,eyeWidth:100,eyeHeight:100,eyeGap:100,caricature:'none',caricatureStrength:75,extremeEyes:0,extremeEars:0,extremeChin:0,nose:'round',hair:'curls'};
 const HEAD_RANGES=[
- ['Bề ngang đầu','width',65,140],['Chiều cao đầu','height',75,130],
- ['Gò má','cheek',65,140],['Bề ngang hàm','jaw',48,127],['Cằm cao / thấp','chin',-18,18],
- ['Cỡ tai','ear',55,150],['Tai cao / thấp','earY',-24,24],
- ['Khung mắt cao / thấp','eyeY',-24,24],['Khung mắt dài / ngắn','eyeWidth',55,150],
- ['Khung mắt mở rộng / hẹp','eyeHeight',48,160],['Khoảng cách hai mắt','eyeGap',65,145]
+ ['Bề ngang đầu','width',35,280],['Chiều cao đầu','height',45,300],
+ ['Gò má','cheek',20,320],['Bề ngang hàm','jaw',15,320],['Cằm cao / thấp','chin',-70,70],
+ ['Cỡ tai','ear',10,450],['Tai cao / thấp','earY',-70,70],
+ ['Khung mắt cao / thấp','eyeY',-70,70],['Khung mắt dài / ngắn','eyeWidth',15,450],
+ ['Khung mắt mở rộng / hẹp','eyeHeight',15,450],['Khoảng cách hai mắt','eyeGap',10,350]
 ];
 const HEAD_HAIR={
  bald:null,
@@ -2377,7 +2377,7 @@ function buildHeadDisplacement(shape,count,padding){
   const dx=Math.max(slope(p,q),slope(r,t)),dy=Math.max(slope(p,r),slope(q,t));
   maxSlope=Math.max(maxSlope,Math.hypot(dx,dy));
  }
- const scale=Math.min(1,.58/(maxSlope||1));
+ const scale=Math.min(1,(shape.freeWarp===false?.58:2.6)/(maxSlope||1));
  return offsets.map(([x,y],i)=>[silhouette[i][0]+x*scale,silhouette[i][1]+y*scale]);
 }
 function applyHaalandWarp(group,h,ix,iy,size){
@@ -2386,7 +2386,8 @@ function applyHaalandWarp(group,h,ix,iy,size){
  const values={base:h.base,fit:h.fit,caricature:h.caricature??'none',caricatureStrength:h.caricatureStrength??75,extremeEyes:h.extremeEyes||0,extremeEars:h.extremeEars||0,extremeChin:h.extremeChin||0,...Object.fromEntries(keys.map(key=>[key,h[key]??baseline[key]]))};
  if(keys.every(key=>values[key]===baseline[key])&&!hasStrongHeadWarp(values)&&!values.extremeEars)return;
  const strong=hasStrongHeadWarp(values);
- const sig=JSON.stringify(values),N=strong?256:128,pad=strong?.62:.25,range=1+2*pad;
+ const wide=Math.max(Math.abs(values.width-100),Math.abs(values.height-100),Math.abs(values.cheek-100),Math.abs(values.jaw-100))>40;
+ const sig=JSON.stringify(values),N=(strong||wide)?256:128,pad=(strong||wide)?.62:.25,range=1+2*pad;
  if(haalandWarpCache.sig!==sig){
   const canvas=document.createElement('canvas');canvas.width=canvas.height=N;
   const ctx=canvas.getContext('2d'),pixels=ctx.createImageData(N,N);
