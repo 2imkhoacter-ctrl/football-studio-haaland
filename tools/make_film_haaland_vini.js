@@ -29,7 +29,7 @@ function handsBehind(t, key, c) {
 // ---- lịch di chuyển: NHANH -> chậm dần (chân lơ lửng) -> DẬM -> dừng nghĩ -> xoay nhanh -> đi ... ----
 const T1 = { a: 0.3, b: 2.1 }, TURN = { a: 3.1, b: 3.3 }, T2 = { a: 3.3, b: 4.6 }, X0 = -1.3, X1 = 1.3, X2 = -0.5;
 const walkX = (t, a, b, xa, xb, p) => xa + (xb - xa) * (1 - Math.pow(1 - clamp((t - a) / (b - a), 0, 1), p));   // p lớn = đầu rất nhanh, cuối rất chậm
-const posX = t => t < T1.b ? walkX(t, T1.a, T1.b, X0, X1, 2.6) : t < T2.a ? X1 : walkX(t, T2.a, T2.b, X1, X2, 2.4);
+const posX = t => t < T1.b ? walkX(t, T1.a, T1.b, X0, X1, 2.2) : t < T2.a ? X1 : walkX(t, T2.a, T2.b, X1, X2, 2.0);
 const posList = []; for (let i = 0; i <= N; i++) { const t = i / FPS; posList.push([t, posX(t), 40]); }
 const STOP = [T1.b, T2.b];                       // hai lần dừng: chân giơ lơ lửng rồi DẬM xuống
 
@@ -37,22 +37,24 @@ const STOP = [T1.b, T2.b];                       // hai lần dừng: chân giơ
 const hero = {
   pos: posList,
   head: [[0, -90], [TURN.a, -90], [TURN.b, 90], [4.7, 90], [4.95, 12], [15, 12]],
-  runSpeed: 3.6, blink: 0.4, seed: 1,
+  runSpeed: 2.8, blink: 0.4, seed: 1,
   ges: [], faces: [{ t0: 0, t1: 15, e: 'think' }], jumps: [],
   mod: (t, key, c) => {
     handsBehind(t, key, c);
     const footX = H.body.hipW * 0.39, k = c.kl;
-    // 1) chân lơ lửng rồi DẬM: trước điểm dừng 0.5s chân trước nhấc lên và treo, tới đúng lúc dừng thì dập xuống thật nhanh
+    // 1) bước chân CUỐI cùng vẫn là bước đi bình thường (cùng độ cao nhấc chân như các bước trước), chỉ CHẬM lại đúng lúc chân đang ở điểm giơ lên, rồi hạ xuống nhanh
     for (const tS of STOP) {
-      const air = ease(t, tS - 0.52, tS - 0.34) * (t < tS ? 1 : 0);      // treo trên không
-      if (air > 0) {
-        const hover = 0.5 + 0.5 * Math.sin((t - tS) * 5);                 // lơ lửng rất chậm, hơi nhấp
-        key.limbs.fR = [footX, c.footY - (34 + 6 * hover) * k, (58 + 8 * hover) * k];
-        key.limbs.fL = [-footX, c.footY, -14 * k];
+      const A2 = Math.max(c.A, 0.5), apex = [footX, c.footY - 28 * A2 * k * 1.6, 55 * A2 * k * 1.0], stance = [footX, c.footY, 0];
+      if (t < tS) {
+        const w = ease(t, tS - 0.34, tS - 0.2);                           // từ bước đi bình thường lên điểm giơ
+        const hover = 0.5 + 0.5 * Math.sin((t - tS) * 4);                  // trôi rất chậm ở điểm giơ
+        const ap = [apex[0], apex[1] - 2 * k * hover, apex[2] + 3 * k * hover];
+        if (w > 0) key.limbs.fR = key.limbs.fR.map((v, j) => mix(v, ap[j], w));
+      } else {
+        const st = ease(t, tS, tS + 0.07);                                 // hạ xuống nhanh
+        if (st < 1) key.limbs.fR = apex.map((v, j) => mix(v, stance[j], st));
       }
-      if (t >= tS) { const st = ease(t, tS, tS + 0.12); key.limbs.fR = key.limbs.fR.map((v, j) => mix(j === 2 ? 34 * k : v, [footX, c.footY, 0][j], st)); key.limbs.fL = [-footX, c.footY, 0]; }
-      key.hip[1] += 11 * pulse(t, tS, 0.14);                              // dập xuống: hông chùng nhẹ
-      key.hrot = r2(key.hrot + 4 * pulse(t, tS, 0.14));
+      key.hip[1] += 6 * pulse(t, tS, 0.12);                                // dập nhẹ: hông chùng chút
     }
     // 2) khuôn mặt suy nghĩ: ngẩng đầu, mắt lúc mở lúc híp, liếc lên
     const wob = 0.5 + 0.5 * Math.sin(2 * Math.PI * (t - 0.3) / 1.5);
