@@ -1,25 +1,24 @@
-﻿# Football Studio — xưởng dựng cầu thủ hoạt hình 2D
+﻿# Football Studio (xưởng dựng cầu thủ 2D)
 
-Công cụ HTML một file (không cần cài gì), dựng cầu thủ hoạt hình 2D: tạo dáng, xoay 360°, đổi tỉ lệ, màu, đầu (5 góc từ ảnh GPT), logo/số/chữ trên áo và quần, hoạt hình keyframe, xuất PNG.
+Kho riêng (private). Mô tả chi tiết kiến trúc và quy tắc: xem `CLAUDE.md`.
 
-## Chạy
-Mở `app/football-studio.html` bằng Chrome hoặc Edge (nên chạy qua máy chủ cục bộ, ví dụ `py -m http.server 8770` rồi vào `http://localhost:8770/app/football-studio.html`).
-Thêm `?nosave` vào địa chỉ để chạy mà không đụng dữ liệu đã lưu của bạn (dùng khi thử).
+## Có gì
+- `app/football-studio.html`: **xưởng chính**, một file HTML chạy offline (tạo dáng, đầu 5 góc, khuôn mặt vector, sân 360°, nhiều diễn viên, camera thật, bóng lửa, hoạt hình keyframe, xuất PNG/JSON). Mở trực tiếp bằng trình duyệt hoặc qua máy chủ tĩnh. Thêm `?nosave` để thử mà không đụng dữ liệu đã lưu.
+- `data/characters/`: nhân vật đã chốt. `haaland-final.json` (đầu mới 5 ảnh), `vini-final.json`. Nạp bằng nút "Nạp JSON" trong thẻ Xuất / Lưu.
+- `data/heads/v2/`, `assets/props/`: ảnh đầu, bóng, cúp.
+- `animations/`: hoạt hình mẫu.
+- `tools/`: sinh hoạt hình/phim bằng code (`make_animation.py`, `make_film.js`, `make_goal_film2.js` + `film_lib.js`), xuất video (`export_video.js`).
+- `remotion-poc/`: dựng video bằng Remotion (nhúng tool vào khung hình, điều khiển theo từng khung). `node_modules` là junction sang `D:\ChatTextStory_AI\POC_01\node_modules` (không có trong kho).
+- `docs/phong-cach-clip-bong-da-ngan.md`: ghi chú phong cách dựng clip.
 
-## Thư mục
-- `app/football-studio.html` — công cụ chính (bản đang phát triển).
-- `data/characters/haaland-final.json` — thông số Haaland đã CHỐT (dùng nút "Nạp JSON").
-- `data/heads/` — 5 ảnh đầu Haaland.
-- `animations/haaland-intro-10s.json` — hoạt hình mẫu 10 giây (vẫy chào, đi, nhảy). Tạo bằng `tools/make_animation.py`.
-- `legacy/` — bản cũ và ghi chú bàn giao.
+## Làm lại phim trên máy có Node
+```
+node tools/make_goal_film2.js                  # sinh remotion-poc/public/goal2.json (đã có sẵn trong kho)
+copy app\football-studio.html remotion-poc\public\studio.html
+cd remotion-poc
+node node_modules/@remotion/cli/remotion-cli.js render src/index.jsx Goal2 out/goal.mp4 --concurrency=3
+```
+Cần tạo lại junction `node_modules` (Windows): `mklink /J node_modules D:\ChatTextStory_AI\POC_01\node_modules`.
 
-## Quy tắc của chủ dự án (QUAN TRỌNG)
-1. Không bao giờ reset thông số đã chốt; test bằng tab riêng với `?nosave`.
-2. Giữ nhãn giao diện bằng tiếng Việt.
-3. Giải pháp tổng quát, không chỉnh riêng cho Haaland.
-4. Tiết kiệm credit: kiểm tra bằng mắt một lần, giải thích ngắn.
-5. Không sửa cơ chế khi chỉ được nhờ chỉnh nét/màu.
-
-## Việc chưa làm / chưa kiểm tra
-- Xuất video / chuỗi PNG cho clip dài (chưa thử); tool chỉ có 1 cầu thủ, chưa có bóng, sân, máy quay, âm thanh.
-- Chạy thử trên điện thoại (Safari) chưa kiểm tra.
+## Dùng trên điện thoại
+Mở trực tiếp `app/football-studio.html` đã tải về (chưa kiểm tra cảm ứng/Safari, xem mục "Chưa làm" trong `CLAUDE.md`).
