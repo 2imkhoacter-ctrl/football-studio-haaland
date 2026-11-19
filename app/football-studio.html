@@ -71,6 +71,14 @@ input[type=file]{font-size:12px;max-width:100%}
    <div class="sub" id="poseStatus" role="status"></div>
    <div class="poses" id="poseList"></div>
   </div>
+  <div class="box"><h3>VẬT PHẨM (bóng, cúp, ...)</h3>
+   <div class="sub">Từng món một. Bóng: đặt tự do trên sân hoặc gắn vào chân/tay (bóng đi theo chân khi sút, cúp đi theo tay khi giơ).</div>
+   <div class="row"><label>Món</label><select id="pkSel"></select></div>
+   <div class="row"><label><input type="checkbox" id="pkShow"> Hiện</label><select id="pkLayer"><option value="front">Vẽ trước nhân vật</option><option value="back">Vẽ sau nhân vật</option></select></div>
+   <div class="row"><label>Gắn vào</label><select id="pkAttach"><option value="free">Tự do (đặt theo toạ độ)</option><option value="fL">Chân trái</option><option value="fR">Chân phải</option><option value="hL">Tay trái</option><option value="hR">Tay phải</option></select></div>
+   <div id="pkSliders"></div>
+   <div class="row"><button id="pkReset">Về mặc định của món này</button></div>
+  </div>
   <div class="box"><h3>KHUÔN MẶT VECTOR (thử nghiệm)</h3>
    <div class="sub">Chỉ chạy với ảnh đầu kiểu mới: không lông mày, không miệng, khung mắt tô xanh lá #00FF00. Hiện mới có ảnh chính diện; góc khác vẫn dùng ảnh gốc.</div>
    <div class="row"><button id="fcOn">Khuôn mặt vector: TẮT</button></div>
@@ -620,6 +628,7 @@ function render(target=fig,preview=true){
  OW=2.1*(B.ow||100)/100;
  target.replaceChildren();
  const sol={fL:solve('fL'),fR:solve('fR'),hL:solve('hL'),hR:solve('hR')};
+ drawProps(target,sol,'back');
  const joints={hL:sol.hL.E,hR:sol.hR.E,fL:sol.fL.E,fR:sol.fR.E,jhL:sol.hL.J,jhR:sol.hR.J,jfL:sol.fL.J,jfR:sol.fR.J};
  const depth=s=>(s.A.z+s.J.z*2+s.E.z)/4;
 
@@ -982,6 +991,7 @@ function render(target=fig,preview=true){
   }
  }
  if(!src)drawDefaultHead(el('g',{transform:`rotate(${pr+H.rot} ${nk[0]} ${nk[1]})`},target),cx,cy,H.size*.36,which,hface,which==='front'?hsn:(which==='back'?-hsn:0),expression);
+ drawProps(target,sol,'front');
  if(!preview)return;
  last=joints;
  $('expression').value=expression;
@@ -1148,7 +1158,50 @@ function armDepthFor(k,v){
 }function syncSide(){const as=S.pose.armSide||{};document.querySelectorAll('#sideRows .grid4').forEach(r=>[...r.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.v===(as[r.dataset.k]||'auto'))))}
 function syncHoleAuto(){$('holeAuto').textContent='Cổ áo tự khớp cổ đầu: '+(S.body.holeAuto?'BẬT':'TẮT');$('holeAuto').classList.toggle('on',!!S.body.holeAuto)}
 $('holeAuto').onclick=()=>{S.body.holeAuto=S.body.holeAuto?0:1;syncHoleAuto();render()};
-// ---- vector face UI ----
+// ======================= PROPS (ball, ...) =======================
+// A prop is a drawn object with its own position / size / spin / layer. It is either FREE (stage coordinates) or ATTACHED to a hand / foot
+// (then x,y are an offset from that joint, so the ball follows the kicking foot). Everything is part of the keyframes.
+const PROP_DEF={
+ ball:{show:false,layer:'front',attach:'free',x:430,y:612,size:100,rot:0}
+};
+const PROP_NAMES=[['ball','Quả bóng']];
+S.props=S.props||{};for(const id in PROP_DEF)S.props[id]=Object.assign({},PROP_DEF[id],S.props[id]||{});
+const PROP_DRAW={
+ ball(g){
+  const r=26,cid='ball-clip-'+Math.random().toString(36).slice(2,7),cp=svgn('clipPath',{id:cid},g);svgn('circle',{cx:0,cy:0,r},cp);
+  svgn('circle',{cx:0,cy:0,r,fill:'#ffffff'},g);
+  const pent=(cx,cy,rad,rot)=>Array.from({length:5},(_,i)=>{const a=rot+i*2*Math.PI/5;return (cx+rad*Math.cos(a)).toFixed(2)+','+(cy+rad*Math.sin(a)).toFixed(2)}).join(' ');
+  const gg=svgn('g',{'clip-path':'url(#'+cid+')'},g);
+  for(let i=0;i<5;i++){const a=-Math.PI/2+i*2*Math.PI/5;
+   svgn('line',{x1:Math.cos(a)*9,y1:Math.sin(a)*9,x2:Math.cos(a)*19,y2:Math.sin(a)*19,stroke:OUT,'stroke-width':2.6,'stroke-linecap':'round'},gg);
+   const b=a+Math.PI/5;svgn('polygon',{points:pent(Math.cos(b)*28,Math.sin(b)*28,10,b+Math.PI),fill:OUT},gg);
+   svgn('line',{x1:Math.cos(a)*19,y1:Math.sin(a)*19,x2:Math.cos(b)*20,y2:Math.sin(b)*20,stroke:OUT,'stroke-width':2.6,'stroke-linecap':'round'},gg)}
+  svgn('polygon',{points:pent(0,0,9.5,-Math.PI/2),fill:OUT},g);
+  svgn('circle',{cx:0,cy:0,r,fill:'none',stroke:OUT,'stroke-width':3.4},g);
+ }
+};
+function drawProps(target,sol,layer){
+ for(const id in S.props){const P=S.props[id];if(!P.show||P.layer!==layer||!PROP_DRAW[id])continue;
+  let px=P.x,py=P.y;if(P.attach!=='free'&&sol[P.attach]){const E=sol[P.attach].E;px=E[0]+P.x;py=E[1]+P.y}
+  const g=svgn('g',{transform:`translate(${px},${py}) rotate(${P.rot}) scale(${P.size/100})`},target);PROP_DRAW[id](g)}
+}
+S.propSel=S.propSel||'ball';
+PROP_NAMES.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;$('pkSel').appendChild(o)});
+const PROP_UI=[['Ngang (tự do: toạ độ; gắn: lệch)','x',-200,800],['Cao / thấp (tự do: toạ độ; gắn: lệch)','y',-200,800],['To / nhỏ (%)','size',20,400],['Xoay / lăn (độ)','rot',-720,720]];
+PROP_UI.forEach(([label,key,mn,mx])=>{const r=document.createElement('div');r.className='row';r.innerHTML=`<label>${label} <b id="pv_${key}">0</b></label><input type="range" id="ps_${key}" min="${mn}" max="${mx}" value="0">`;$('pkSliders').appendChild(r);
+ $('ps_'+key).oninput=e=>{S.props[S.propSel][key]=+e.target.value;$('pv_'+key).textContent=S.props[S.propSel][key];render()}});
+function syncProps(){
+ const P=S.props[S.propSel];$('pkSel').value=S.propSel;$('pkShow').checked=!!P.show;$('pkLayer').value=P.layer;$('pkAttach').value=P.attach;
+ PROP_UI.forEach(([,key])=>{$('ps_'+key).value=P[key];$('pv_'+key).textContent=P[key]});
+}
+$('pkSel').onchange=e=>{S.propSel=e.target.value;syncProps()};
+$('pkShow').onchange=e=>{S.props[S.propSel].show=e.target.checked;render()};
+$('pkLayer').onchange=e=>{S.props[S.propSel].layer=e.target.value;render()};
+$('pkAttach').onchange=e=>{const P=S.props[S.propSel],was=P.attach;P.attach=e.target.value;
+ // switching between free and attached: start from a sensible spot (ball: just ahead of the foot)
+ if(was==='free'&&P.attach!=='free'){P.x=0;P.y=P.attach[0]==='f'?12:20}else if(P.attach==='free'&&was!=='free'){P.x=PROP_DEF[S.propSel].x;P.y=PROP_DEF[S.propSel].y}
+ syncProps();render()};
+$('pkReset').onclick=()=>{S.props[S.propSel]=Object.assign({},PROP_DEF[S.propSel]);syncProps();render()};// ---- vector face UI ----
 const FACE_UI=[['Nhìn ngang','lookX',-100,100],['Nhìn dọc','lookY',-100,100],['Cỡ con ngươi (%)','pupil',50,160],['Mí mắt trái (0 mở - 100 nhắm)','lidL',0,100],['Mí mắt phải','lidR',0,100],['Lông mày: độ cao trái','browHL',-100,100],['Lông mày: độ cao phải','browHR',-100,100],['Lông mày: độ dày (%)','browThick',50,200],['Miệng: độ mở','mouthOpen',0,100],['Miệng: dời ngang','mouthDx',-100,100],['Miệng: dời dọc','mouthDy',-100,100],['Miệng: to nhỏ (%)','mouthScale',50,200]];
 const BROW_NAMES=[['normal','Bình thường'],['angry','Giận'],['sad','Buồn / lo'],['surprised','Ngạc nhiên'],['skeptic','Nghi ngờ'],['happy','Vui'],['focus','Nhíu / tập trung'],['smug','Thách thức']];
 const MOUTH_NAMES=[['closed','Ngậm'],['smile','Cười mỉm'],['smirk','Nhếch mép'],['sad','Buồn'],['grin','Cười toe (lộ răng)'],['a','Há "a"'],['o','Tròn "o"'],['teeth','Nghiến răng'],['tongue','Le lưỡi']];
@@ -1296,7 +1349,7 @@ $('poseFiles').onchange=async e=>{
  $('poseStatus').textContent=`Đã thêm ${count} tư thế.`+(failed.length?` Tệp lỗi: ${failed.join(', ')}.`:'');
 };
 function syncAll(){
- syncBackdrop();syncEnds();syncSide();syncHoleAuto();syncDecals();syncFace();
+ syncBackdrop();syncEnds();syncSide();syncHoleAuto();syncDecals();syncFace();syncProps();
  const P=S.pose,K=S.look,H=S.head;
  $('rotFine').value=P.rotFine;$('yaw').value=P.yaw;syncTorso();syncBody();
  $('pName').value=K.name;$('pNum').value=K.num;$('cShirt').value=K.shirt;$('cNum').value=K.numc;$('cShorts').value=K.shorts;
@@ -1575,7 +1628,7 @@ $('headLoad').onclick=autoHeads;
 // browser automatically. On a first visit the character file data/characters/haaland.json is used.
 // Add ?nosave to the address to run without touching the saved state (used for testing).
 const NOSAVE=location.search.includes('nosave'),SAVEKEY='fs_state_v2';
-function stateToSave(){return{v:2,backdrop:S.backdrop,body:S.body,look:S.look,head:{size:S.head.size,sink:S.head.sink,rot:S.head.rot,yaw:S.head.yaw,x:S.head.x,y:S.head.y,expression:S.head.expression},library:S.library,decals:S.decals,face:S.face,pose:S.pose,keys:S.keys,dur:S.dur,idle:S.idle,loop:S.loop,bodyLocked:S.bodyLocked}}
+function stateToSave(){return{v:2,backdrop:S.backdrop,body:S.body,look:S.look,head:{size:S.head.size,sink:S.head.sink,rot:S.head.rot,yaw:S.head.yaw,x:S.head.x,y:S.head.y,expression:S.head.expression},library:S.library,decals:S.decals,face:S.face,props:S.props,pose:S.pose,keys:S.keys,dur:S.dur,idle:S.idle,loop:S.loop,bodyLocked:S.bodyLocked}}
 let saveTimer;
 function scheduleSave(){
  if(NOSAVE)return;
@@ -1591,6 +1644,7 @@ function applyState(d){
  if(d.library)S.library=d.library;
  if(d.decals)S.decals=d.decals;
  if(d.face)S.face=Object.assign({},FACE_DEF,d.face);
+ if(d.props){for(const id in PROP_DEF)S.props[id]=Object.assign({},PROP_DEF[id],d.props[id]||{})}
  if(d.pose)S.pose=clonePose(d.pose);
  if(d.keys)S.keys=d.keys;if(d.dur)S.dur=d.dur;
  if('idle' in d)S.idle=!!d.idle;
@@ -1606,15 +1660,16 @@ render=function(){drawFrame();scheduleSave()};
 S.keys=S.keys||[];S.dur=S.dur||3;S.t=0;S.playing=false;S.idle=false;S.loop=true;
 const ease=u=>u*u*(3-2*u),mix=(a,b,u)=>a+(b-a)*u,mix3=(a,b,u)=>[mix(a[0],b[0],u),mix(a[1],b[1],u),mix(a[2],b[2],u)];
 const angMix=(a,b,u)=>a+wrap(b-a)*u;
-function takeKey(t){const P=S.pose;return{t,hip:P.hip.slice(),type:P.type,rotFine:P.rotFine,yaw:P.yaw,limbs:JSON.parse(JSON.stringify(P.limbs)),poles:JSON.parse(JSON.stringify(P.poles)),ends:JSON.parse(JSON.stringify(P.ends||DEFAULT_POSE().ends)),side:Object.assign({hL:'auto',hR:'auto'},P.armSide||{}),hyaw:S.head.yaw||0,hrot:S.head.rot||0,expression:S.head.expression,face:JSON.parse(JSON.stringify(S.face||FACE_DEF))}}
+function takeKey(t){const P=S.pose;return{t,hip:P.hip.slice(),type:P.type,rotFine:P.rotFine,yaw:P.yaw,limbs:JSON.parse(JSON.stringify(P.limbs)),poles:JSON.parse(JSON.stringify(P.poles)),ends:JSON.parse(JSON.stringify(P.ends||DEFAULT_POSE().ends)),side:Object.assign({hL:'auto',hR:'auto'},P.armSide||{}),hyaw:S.head.yaw||0,hrot:S.head.rot||0,expression:S.head.expression,face:JSON.parse(JSON.stringify(S.face||FACE_DEF)),props:JSON.parse(JSON.stringify(S.props))}}
 function poseAt(t){
  const ks=[...S.keys].sort((a,b)=>a.t-b.t);if(!ks.length)return null;
  if(t<=ks[0].t)return ks[0];if(t>=ks[ks.length-1].t)return ks[ks.length-1];
  let i=0;while(ks[i+1].t<=t)i++;const A=ks[i],B=ks[i+1],raw=(t-A.t)/(B.t-A.t||1),u=A.lin?raw:ease(raw); // lin:true keys (densely sampled animations) are not eased again
  const L={},Q={},E={},z=DEFAULT_POSE().ends;for(const k of ['hL','hR','fL','fR']){L[k]=mix3(A.limbs[k],B.limbs[k],u);Q[k]=mix3(A.poles[k],B.poles[k],u);
   const ea=(A.ends||z)[k]||[0,0],eb=(B.ends||z)[k]||[0,0];E[k]=[mix(ea[0],eb[0],u),mix(ea[1],eb[1],u),mix(ea[2]||0,eb[2]||0,u)]}
- return{t,ends:E,side:u<.5?A.side:B.side,hip:[mix(A.hip[0],B.hip[0],u),mix(A.hip[1],B.hip[1],u)],type:u<.5?A.type:B.type,rotFine:angMix(A.rotFine,B.rotFine,u),yaw:angMix(A.yaw,B.yaw,u),limbs:L,poles:Q,hyaw:angMix(A.hyaw,B.hyaw,u),hrot:angMix(A.hrot,B.hrot,u),expression:A.expression,face:mixFace(A.face,B.face,u)};
+ return{t,ends:E,side:u<.5?A.side:B.side,hip:[mix(A.hip[0],B.hip[0],u),mix(A.hip[1],B.hip[1],u)],type:u<.5?A.type:B.type,rotFine:angMix(A.rotFine,B.rotFine,u),yaw:angMix(A.yaw,B.yaw,u),limbs:L,poles:Q,hyaw:angMix(A.hyaw,B.hyaw,u),hrot:angMix(A.hrot,B.hrot,u),expression:A.expression,face:mixFace(A.face,B.face,u),props:mixProps(A.props,B.props,u)};
 }
+function mixProps(a,b,u){const o={};for(const id in PROP_DEF){const x=Object.assign({},PROP_DEF[id],(a||{})[id]),y=Object.assign({},PROP_DEF[id],(b||{})[id]);o[id]={};for(const k in PROP_DEF[id])o[id][k]=(typeof PROP_DEF[id][k]==='number')?mix(x[k],y[k],u):(u<.5?x[k]:y[k])}return o}
 function mixFace(a,b,u){a=Object.assign({},FACE_DEF,a||{});b=Object.assign({},FACE_DEF,b||{});const o={};for(const k in FACE_DEF){o[k]=(typeof FACE_DEF[k]==='number')?mix(a[k],b[k],u):(u<.5?a[k]:b[k])}o.on=a.on;return o}
 function applyKey(k,t,animate=S.playing){
  const P=S.pose;P.hip=k.hip.slice();P.type=k.type;P.rotFine=k.rotFine;P.yaw=k.yaw;
@@ -1622,6 +1677,7 @@ function applyKey(k,t,animate=S.playing){
  P.ends=JSON.parse(JSON.stringify(k.ends||DEFAULT_POSE().ends));P.armSide=Object.assign({hL:'auto',hR:'auto'},k.side||{});
  S.head.yaw=k.hyaw??0;S.head.rot=k.hrot??0;
  if(k.face)S.face=Object.assign({},FACE_DEF,k.face);
+ if(k.props){for(const id in PROP_DEF)S.props[id]=Object.assign({},PROP_DEF[id],k.props[id]||{})}
  S.head.expression=validExpression(k.expression);
  if(S.idle&&animate){ // small constant life: breathing bob, tiny head sway
   const s=Math.sin(t*2*Math.PI*0.8);P.hip[1]+=s*2.2;S.head.rot=(k.hrot??0)+Math.sin(t*2*Math.PI*0.5)*1.6;

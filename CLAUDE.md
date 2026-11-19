@@ -32,6 +32,9 @@ Làm được: tạo dáng bằng IK (kéo vòng vàng/xanh/trắng), xoay 360°
 ## Khuôn mặt vector (thử nghiệm, mặc định TẮT)
 Ảnh đầu kiểu mới (data/heads/haaland_front_v2_vectorface.png): không lông mày, không miệng, khung mắt tô xanh #00FF00, nền trong suốt. Khi bật, app khử màu xanh (keyGreen), tự tìm 2 mắt, vẽ lòng trắng/con ngươi/mí SAU ảnh và lông mày/miệng TRƯỚC ảnh (drawFaceBack/drawFaceFront). Trạng thái ở S.face (cũng nằm trong keyframe để chớp mắt/đổi biểu cảm). Hiện chỉ có góc chính diện; 4 góc còn lại chưa có ảnh kiểu mới.
 
+## Vật phẩm (props)
+S.props (PROP_DEF/PROP_DRAW/drawProps): mỗi món có show, layer (trước/sau nhân vật), attach (free/fL/fR/hL/hR), x, y, size, rot; nằm trong keyframe và trạng thái lưu. Mới có **bóng**; làm tiếp từng món: cúp, khung thành, đối thủ (nhân vật thứ hai), khán đài.
+
 ## Chạy và kiểm tra
 Chạy máy chủ tĩnh ở gốc kho, mở `app/football-studio.html?nosave`. Biến toàn cục để thử: `window.__S` (state), `window.__render`. Để kiểm tra bằng mắt cần trình duyệt; nếu môi trường không có thì nói rõ là **chưa xem bằng mắt**.
 
@@ -44,5 +47,6 @@ Chạy máy chủ tĩnh ở gốc kho, mở `app/football-studio.html?nosave`. B
 
 ## Cách làm việc khi chủ dự án gửi ảnh lỗi
 Dựng lại đúng tư thế/góc quay (nạp `data/characters/haaland-final.json`, đặt yaw), phóng to vùng khoanh, tìm nguyên nhân gốc, sửa tổng quát, kiểm tra lại, báo ngắn: đã sửa gì, đã thử ở đâu, chưa thử gì.
+
 
 
