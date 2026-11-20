@@ -195,7 +195,7 @@ input[type=file]{font-size:12px;max-width:100%}
    <div class="sub">Mặt nghiêng (vẽ nhìn sang PHẢI, tự lật khi quay trái)</div><input type="file" id="headSide" accept="image/*">
    <div class="sub">Sau gáy</div><input type="file" id="headBack" accept="image/*">
    <div class="row"><label>Độ lún cổ (cổ ngắn) <b id="hSinkVal">34</b></label><input type="range" id="hSink" min="-10" max="70" value="34"></div>
-   <div class="row"><label>Kích thước</label><input type="range" id="hSize" min="60" max="320" value="200"></div>
+   <div class="row"><label>Kích thước</label><input type="range" id="hSize" min="60" max="320" value="200"><input type="number" id="hSizeN" step="1" style="width:66px;margin-left:6px" title="Gõ số bất kỳ: đầu to bằng cái nhà"></div>
    <div class="row"><label>Quay đầu (trước ↔ sau) <b id="hYawVal">0°</b></label><input type="range" id="hYaw" min="-180" max="180" value="0"></div>
    <div class="row"><label>Nghiêng đầu <b id="hRotVal">0°</b></label><input type="range" id="hRot" min="-180" max="180" value="0"></div>
    <div class="row"><button id="headReset">Đầu theo thân (về 0°)</button></div>
@@ -259,14 +259,27 @@ const DECAL_DEF={
 const DECAL_NAMES=[['f1','Áo trước: ô 1 (số 9)'],['f2','Áo trước: ô 2'],['f3','Áo trước: ô 3'],['sh','Quần'],['bn','Lưng: tên'],['bnum','Lưng: số']];
 const dget=id=>{const r=Object.assign({},DECAL_DEF[id],(S.decals||{})[id]);if(id==='sh'&&!(((S.decals||{}).sh||{}).leg)){r.x=DECAL_DEF.sh.x;r.y=DECAL_DEF.sh.y;r.leg='fL'}return r};
 const BODY_UI=[
- ['Độ dài trang phục',[['Tay áo (%)','sleeveHem',25,90],['Gấu quần (+ dài hơn)','shortHem',-20,25]]],
- ['Độ dài',[['Cánh tay trên','upA',40,120],['Cẳng tay','foreA',40,110],['Đùi','thigh',60,150],['Cẳng chân','shin',60,140]]],
- ['Độ to',[['Bắp tay','wUpA',12,56],['Cẳng tay','wFore',10,48],['Đùi','wThigh',18,70],['Bắp chân','wShin',12,54],['Bàn tay','hand',7,26],['Giày','shoe',10,36],['Bàn tay to / nhỏ (%)','handS',50,220],['Bàn chân to / nhỏ (%)','footS',50,220],['Cổ','neck',8,28]]],
- ['Lỗ cổ áo (cổ cầu thủ cắm vào đây)',[['Độ rộng lỗ (nhìn trước)','holeW',8,44],['Độ rộng lỗ (nhìn nghiêng)','holeS',4,60],['Độ sâu lỗ','holeD',4,50]]],
- ['Vai trên / cổ vai (chỗ áo gặp cổ)',[['Rộng vai trên (nhìn trước, % của ngực)','shW',50,120],['Dày vai trên (nhìn nghiêng, % bề ngang)','depthS',20,130],['Độ dốc vai (0 = vai bằng, 100 = dốc như bản đầu)','shDrop',0,150]]],
- ['Nét viền cả người',[['Độ dày nét viền thân (%) — chỉnh cho khớp nét viền của đầu','ow',40,300]]],
- ['Tách thân dưới khỏi áo (chỉ chỉnh được khi MỞ KHÓA)',[['Thân dưới lên (-) / xuống (+)','gap',-40,70]]],
- ['Thân',[['Ngực / vai (nhìn trước)','chest',26,70],['Dày lưng trên / ngực (nhìn nghiêng, % bề ngang)','depthK',30,130],['Eo','waist',22,64],['Dày eo (nhìn nghiêng, % bề ngang)','depthW',30,130],['Hông / quần','hipW',28,70],['Dày hông (nhìn nghiêng, % bề ngang)','depthH',30,130],['Độ nhô mông (% bề ngang hông)','gluteDepth',-25,55],['Chiều cao thân','torsoH',100,200]]]
+ // Sắp theo BỘ PHẬN như trình tạo nhân vật trong game: mỗi nhóm = một phần cơ thể. Gõ số vào ô bên cạnh để vượt giới hạn thanh trượt.
+ ['VAI',[['Rộng vai (nhìn trước, % ngực)','shW',50,120],['Dày vai (nhìn nghiêng)','depthS',20,130],['Độ dốc vai (0 = bằng)','shDrop',0,150]]],
+ ['NGỰC / LƯNG',[['Rộng ngực (bề ngang)','chest',26,70],['Dày ngực (nhìn nghiêng)','depthK',30,130]]],
+ ['EO / BỤNG',[['Rộng eo','waist',22,64],['Dày eo (nhìn nghiêng)','depthW',30,130]]],
+ ['HÔNG / MÔNG',[['Rộng hông','hipW',28,70],['Dày hông (nhìn nghiêng)','depthH',30,130],['Độ nhô mông','gluteDepth',-25,55]]],
+ ['THÂN',[['Chiều cao thân','torsoH',100,200],['Thân dưới lên (-) / xuống (+) (cần MỞ KHÓA)','gap',-40,70]]],
+ ['CỔ',[['Độ to cổ','neck',8,28],['Lỗ cổ áo rộng (nhìn trước)','holeW',8,44],['Lỗ cổ áo rộng (nhìn nghiêng)','holeS',4,60],['Lỗ cổ áo sâu','holeD',4,50]]],
+ ['TAY',[['Dài cánh tay trên','upA',40,120],['Dài cẳng tay','foreA',40,110],['To bắp tay','wUpA',12,56],['To cẳng tay','wFore',10,48],['To bàn tay (%)','handS',50,220],['Cỡ bàn tay (gốc)','hand',7,26]]],
+ ['CHÂN',[['Dài đùi','thigh',60,150],['Dài cẳng chân','shin',60,140],['To đùi','wThigh',18,70],['To bắp chân','wShin',12,54],['To bàn chân (%)','footS',50,220],['Cỡ giày (gốc)','shoe',10,36]]],
+ ['TRANG PHỤC / NÉT',[['Tay áo (%)','sleeveHem',25,90],['Gấu quần (+ dài hơn)','shortHem',-20,25],['Độ dày nét viền (%)','ow',40,300]]]
+];
+// KIỂU THÂN NHANH (như bộ tạo nhân vật trong game): nhân các chỉ số của thân hiện tại. 'Chuẩn' trả về thân lúc bấm lần đầu.
+const BODY_TYPES=[
+ ['Chuẩn',{}],
+ ['Gầy',{w:.7,l:1.05}],
+ ['Béo',{w:1.55,l:.95}],
+ ['Cơ bắp',{chest:1.5,wUpA:1.6,wFore:1.4,waist:.9,wThigh:1.3,wShin:1.2,depthK:1.2}],
+ ['Thân bự chân nhỏ',{chest:2.2,waist:2,hipW:1.6,torsoH:1.5,depthK:1.4,depthW:1.4,upA:1.4,foreA:1.3,wUpA:1.6,wFore:1.4,thigh:.55,shin:.55,wThigh:.8,wShin:.8}],
+ ['Chân siêu dài',{thigh:2.4,shin:2.4,wThigh:.8,wShin:.8}],
+ ['Tay siêu dài',{upA:2.4,foreA:2.4}],
+ ['Khổng lồ',{w:2,l:2}]
 ];
 // Torso anchors in its own space (facing the viewer, upright), origin at the hip centre; follow the proportions.
 function base(){const b=S.body;return{neck:[0,-b.torsoH],shL:[-(b.chest-4),-(b.torsoH-20)],shR:[b.chest-4,-(b.torsoH-20)],hipL:[-b.hipW*.43,34+b.gap],hipR:[b.hipW*.43,34+b.gap]}}
@@ -1381,6 +1394,14 @@ $('mirror').onclick=()=>{ // mirror the 3D pose: swap sides, flip the sideways a
  S.head.yaw=wrap(-(S.head.yaw||0));S.head.rot=wrap(-S.head.rot);syncAll();render();
 };
 // body proportion sliders (built from BODY_UI)
+{ const box=$('bodySliders'),row=document.createElement('div');row.className='row';row.style.flexWrap='wrap';row.style.gap='4px';
+ const lab=document.createElement('div');lab.className='sub';lab.textContent='KIỂU THÂN NHANH';box.appendChild(lab);
+ const WKEYS=['wUpA','wFore','wThigh','wShin','chest','waist','hipW','depthK','depthW','depthH'],LKEYS=['upA','foreA','thigh','shin','torsoH'];
+ BODY_TYPES.forEach(([name,f])=>{const b=document.createElement('button');b.type='button';b.textContent=name;b.onclick=()=>{
+  if(!S._bodyBase)S._bodyBase=Object.assign({},S.body);const base=S._bodyBase;
+  for(const k of WKEYS.concat(LKEYS)){const m=f[k]??(WKEYS.includes(k)?f.w:f.l)??1;setBody(k,Math.round(base[k]*m*10)/10)}
+  syncBody();render()};row.appendChild(b)});
+ box.appendChild(row)}
 BODY_UI.forEach(([title,items])=>{
  const box=$('bodySliders'),h=document.createElement('div');h.className='sub';h.textContent=title;box.appendChild(h);
  items.forEach(([label,key,min,max])=>{
@@ -1997,7 +2018,7 @@ $('dcFile').onchange=e=>{
 bind('pName',v=>S.look.name=v.toUpperCase());bind('pNum',v=>S.look.num=v);
 bind('cShirt',v=>S.look.shirt=v);bind('cNum',v=>S.look.numc=v);bind('cShorts',v=>S.look.shorts=v);
 bind('cSocks',v=>S.look.socks=v);bind('cShoes',v=>S.look.shoes=v);bind('cSkin',v=>S.look.skin=v);bind('cHair',v=>S.look.hair=v);
-bind('hSize',v=>S.head.size=+v);bind('hSink',v=>{S.head.sink=+v;$('hSinkVal').textContent=v});bind('hRot',v=>S.head.rot=+v);bind('hYaw',v=>S.head.yaw=+v);
+bind('hSize',v=>{S.head.size=+v;const n=$('hSizeN');if(n)n.value=v});{const n=$('hSizeN');if(n)n.onchange=e=>{const v=+e.target.value;if(!isFinite(v))return;const r=$('hSize');r.min=Math.min(+r.min,v);r.max=Math.max(+r.max,v);r.value=v;S.head.size=v;render()}};bind('hSink',v=>{S.head.sink=+v;$('hSinkVal').textContent=v});bind('hRot',v=>S.head.rot=+v);bind('hYaw',v=>S.head.yaw=+v);
 $('headReset').onclick=()=>{S.head.yaw=0;S.head.rot=0;$('hYaw').value=0;$('hRot').value=0;render()};bind('hX',v=>S.head.x=+v);bind('hY',v=>S.head.y=+v);
 [['headFront','front'],['headSide','side'],['headBack','back']].forEach(([id,k])=>{
  $(id).onchange=async e=>{
@@ -2098,7 +2119,7 @@ function syncAll(){
  $('rotFine').value=P.rotFine;$('yaw').value=P.yaw;syncTorso();syncBody();
  $('pName').value=K.name;$('pNum').value=K.num;$('cShirt').value=K.shirt;$('cNum').value=K.numc;$('cShorts').value=K.shorts;
  $('cSocks').value=K.socks;$('cShoes').value=K.shoes;$('cSkin').value=K.skin;$('cHair').value=K.hair;
- $('hSize').value=H.size;$('hSink').value=H.sink??34;$('hSinkVal').textContent=H.sink??34;$('hRot').value=H.rot;$('hYaw').value=H.yaw||0;$('hX').value=H.x;$('hY').value=H.y;
+ {const r=$('hSize');r.min=Math.min(+r.min,H.size);r.max=Math.max(+r.max,H.size);const n=$('hSizeN');if(n)n.value=H.size}$('hSize').value=H.size;$('hSink').value=H.sink??34;$('hSinkVal').textContent=H.sink??34;$('hRot').value=H.rot;$('hYaw').value=H.yaw||0;$('hX').value=H.x;$('hY').value=H.y;
 }
 
 function download(blob,name){
@@ -2756,7 +2777,7 @@ function syncHeadEditor(){
  const h={...HEAD_SHAPE,...S.head.shape};
  $('vectorHead').checked=h.enabled;
  $('headShapeControls').hidden=!h.enabled;
- for(const [,key] of HEAD_RANGES){$('hs_'+key).value=h[key];$('hsv_'+key).textContent=h[key];$('hsn_'+key).value=h[key]}
+ for(const [,key] of HEAD_RANGES){const r=$('hs_'+key);r.min=Math.min(+r.min,h[key]);r.max=Math.max(+r.max,h[key]);r.value=h[key];$('hsv_'+key).textContent=h[key];$('hsn_'+key).value=h[key]}
  for(const key of ['nose','hair']){
   $('hs_'+key).value=h[key];
   $('hs_'+key).disabled=isPhotoHead(h);
@@ -3030,7 +3051,7 @@ function addHeadNumber(range,key,min,max){
  number.onchange=()=>{
   if(number.value===''){syncHeadEditor();return;}
   const value=Number(number.value);
-  if(Number.isFinite(value))updateHeadShape(key,Math.max(min,Math.min(max,Math.round(value))));
+  if(Number.isFinite(value)){range.min=Math.min(+range.min,value);range.max=Math.max(+range.max,value);number.min=range.min;number.max=range.max;updateHeadShape(key,Math.round(value))}  // gõ SỐ BẤT KỲ: thanh trượt tự nới biên
  };
  const reset=document.createElement('button');
  reset.type='button';reset.textContent='↺';reset.title='Đặt lại thông số này';
