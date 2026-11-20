@@ -437,8 +437,8 @@ function rotateToward(p,a,b){
  const k=mul3(ax,1/s);
  return add3(add3(mul3(p,c),mul3(cross3(k,p),s)),mul3(k,dot3(k,p)*(1-c)));
 }
-function socketMesh(){
- const faces=[],n=20;
+function socketMesh(N){
+ const faces=[],n=N||20;
  const edge=(p,q)=>[p[1]-q[1],q[0]-p[0],p[0]*q[1]-q[0]*p[1]];
  const V=view(),angle=rad(planeRot()),cr=Math.cos(angle),sr=Math.sin(angle),hip=S.pose.hip;
  function screen(p){
@@ -857,7 +857,7 @@ function renderOne(target=fig,preview=true){
  }
  const legPaint=k=>[{path:(legPaths[k+'skin']||'')+(legPaths[k+'calf']||''),fill:K.skin},{path:legPaths[k+'sock'],fill:K.socks},{path:legPaths[k+'shoe'],fill:K.shoes}];
  const armParts=k=>{
-  const {a,j,e}=sol[k],upper=axisUnit(sub3(j,a)),fore=axisUnit(sub3(e,j)),mesh=socketMesh();
+  const {a,j,e}=sol[k],upper=axisUnit(sub3(j,a)),fore=axisUnit(sub3(e,j)),mesh=socketMesh(40);
   const sleeveLength=len3(sub3(j,a))*(B.sleeveHem??53)/100,outer=B.wUpA*.46+1.5;
   mesh.cup('sleeve',a,upper,sleeveLength,B.wUpA*.48+1.5,outer,outer*.84,outer*.38,true);
   const start=along(a,upper,sleeveLength-outer*.42),radius=Math.min(B.wUpA*.43,B.wFore*.52);
@@ -900,17 +900,20 @@ function renderOne(target=fig,preview=true){
   if(h3){
    const W=Math.max(tipR*1.55,B.hand*.95)*(B.handS||100)/100,PL=W*1.9,PT=W*.4,fr0=W*.19,o0=sr*.5,ps=mul3(nrm,Math.sign(dot3(nrm,pnR))||1);
    mesh.shell('h3p',e,hdir,[[-depthIn,0],[-depthIn,sr],[o0,sr],[o0,0]]);
-   mesh.shell('h3p',along(e,hdir,o0),hdir,[[0,sr/W],[PL*.18,.9],[PL*.5,1],[PL*.85,.98],[PL*.97,.8],[PL,0]],[fw,W,PT]);
+   {const pp=[],q0=sr/W,ss=x=>x*x*(3-2*x);for(let i=0;i<=16;i++){const tt=i/16;let r;
+     if(tt<.25)r=q0+(1-q0)*ss(tt/.25);else if(tt<.72)r=1;else r=Math.sqrt(Math.max(0,1-Math.pow((tt-.72)/.28,2)))*.96+.04*(1-tt)/.28;pp.push([PL*tt,Math.max(0,r)])}
+    pp[pp.length-1][1]=0;mesh.shell('h3p',along(e,hdir,o0),hdir,pp,[fw,W,PT])}
+   const cap3=(L,r)=>{const r2=r*.86,o=[[0,r],[L*.25,r*.98],[L*.5,(r+r2)/2]],c0=Math.max(0,L-r2*1.2);o.push([c0,r2*.99]);for(let a=12;a<=90;a+=13){const q=a*Math.PI/180;o.push([c0+r2*1.2*Math.sin(q)*.9+ (L-c0-r2*1.2*.9)*Math.sin(q)*0,r2*Math.cos(q)])}o[o.length-1][1]=0;return o};
    const U=[.74,.25,-.25,-.74],LN=[.92,1,.93,.74],FR=[.45,.3,.25];
    h3.f.forEach((cf,i)=>{
     let p=add3(along(e,hdir,o0+PL*.9),mul3(fw,U[i]*W)),a=0;const dl=axisUnit(add3(mul3(hdir,Math.cos(rad(cf.s))),mul3(fw,Math.sin(rad(cf.s)))));
     for(let j=0;j<3;j++){a+=cf.c[j];const dir=axisUnit(add3(mul3(dl,Math.cos(rad(a))),mul3(ps,Math.sin(rad(a))))),L=PL*.98*LN[i]*FR[j];
-     mesh.shell('h3f'+i,p,dir,capProf2(L,fr0*(1-.1*j)));p=along(p,dir,L*.93)}
+     mesh.shell('h3f'+i,p,dir,cap3(L,fr0*(1-.1*j)));p=along(p,dir,L*.93)}
    });
    {const T=h3.t;let p=add3(along(e,hdir,o0+PL*.3),mul3(fw,W*.9));
     const d0=axisUnit(add3(mul3(hdir,Math.cos(rad(T.ab))),mul3(fw,Math.sin(rad(T.ab))))),d1=axisUnit(add3(mul3(d0,Math.cos(rad(T.op))),mul3(ps,Math.sin(rad(T.op))))),
      d2=axisUnit(add3(mul3(d1,Math.cos(rad(T.tk))),mul3(fw,-Math.sin(rad(T.tk)))));let dir=d2,a=0;
-    [.5,.42].forEach((fr,j)=>{a+=T.c[j];const dd=axisUnit(add3(mul3(dir,Math.cos(rad(T.c[j]))),mul3(ps,Math.sin(rad(T.c[j])))));const L=PL*fr;mesh.shell('h3t',p,dd,capProf2(L,fr0*1.25*(1-.12*j)));p=along(p,dd,L*.93);dir=dd});}
+    [.5,.42].forEach((fr,j)=>{a+=T.c[j];const dd=axisUnit(add3(mul3(dir,Math.cos(rad(T.c[j]))),mul3(ps,Math.sin(rad(T.c[j])))));const L=PL*fr;mesh.shell('h3t',p,dd,cap3(L,fr0*1.25*(1-.12*j)));p=along(p,dd,L*.93);dir=dd});}
   }else
   if(curl<.55){
   mesh.shell('hpalm',e,hdir,[[-depthIn,0],[-depthIn,sr],[stub,sr],[stub,0]]);
