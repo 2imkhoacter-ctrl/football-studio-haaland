@@ -92,3 +92,11 @@ Thẻ "Vật phẩm & nền" → hộp CAMERA. Bật "Dùng camera thật" (`sce
 **Thay đổi trong `app/football-studio.html` (chủ dự án đã đồng ý, gộp vào `main` ngày 2026-11-19):** thêm kiểu miệng **"Chu môi siuuu"** (`mouthKind:'siu'`, hàm `siuWarp`/`siuGeom`): nhìn nghiêng thì kéo chính đầu nhô ra, không viền, màu da, lỗ tối ở đầu mõm; nhìn thẳng là khối tròn phồng. Chỉ thêm một lựa chọn; các kiểu miệng cũ đã so ảnh không đổi. Cũng đã sửa lỗi nhỏ: `mixFace` từng bỏ `browColor` khi chạy keyframe (giờ giữ lại; không có `browColor` thì hành vi như cũ).
 
 **Lưu ý mã hóa (đã xử lý 2026-11-19):** các mục "Bản v25", "Nhiều diễn viên", "Camera thật" từng bị hỏng chữ tiếng Việt (có thể do lưu bằng PowerShell sai bảng mã); đã phục dựng lại bằng UTF-8 sạch ở trên. Khi lưu file bằng PowerShell nhớ đặt UTF-8.
+
+
+## Cập nhật 2026-11-20: hiệu ứng khung hình, thế mẫu, dáng bàn tay
+- **Hiệu ứng khung hình** (hộp CAMERA > "Hiệu ứng khung hình / chuyển cảnh", trường `scene.fade/bars/zb/spark`, mặc định 0 = tắt): màn đen, viền đen trên/dưới, nhòe tỏa từ tâm (zoom blur, vẽ nhiều bản phóng to mờ), lấp lánh nhấp nháy. Dùng bằng key để làm chuyển cảnh (ví dụ zb 100 -> 0 trong 0,15s sau khi cắt). Vẽ trong `#fxLayer` (hàm `updateFx`).
+- **Thế mẫu**: danh sách thả xuống "Thế mẫu (học từ video)" trong hộp TƯ THẾ (21 thế, nhóm Cơ bản / Ăn mừng / Vật cầm trên tay / Thể thao), nút "Hoàn tác thế mẫu". Dữ liệu ở `POSE_PRESETS`/`posePresetData`, tự co theo độ dài tay chân (`ka`, `kl`). Thế mẫu chỉ đặt tay/chân/thân/độ cao hông/dáng bàn tay/lật bàn tay.
+- **Dáng bàn tay (ngón)**: chọn trong hộp XOAY BÀN TAY (chọn tay trái/phải bằng nút ở trên): Tự nhiên (như cũ), Xòe 5 ngón, Khép sát, Chỉ ngón trỏ, Dấu rock (trỏ + út), Giơ ngón cái. Lưu ở `S.pose.handShape {hL,hR}` và trong key (`hshape`); mặc định `auto` = hình cũ. Muốn thấy lòng bàn tay (nhất là khi giơ tay lên) thì đặt "Lật bàn tay" = ±90 (thế mẫu đã đặt sẵn). Còn thiếu: chắp tay đan ngón, nắm vải có ngón cong ôm.
+- Tài liệu học video: `docs/checklist-hoc-tu-video.md` (cần trả lời gì khi xem video), `docs/hoc-ky-thuat-short-2-hai-ao-so-7-10.md`; công cụ đo camera `tools/phan_tich_camera.py`.
+- Đã kiểm tra bằng mắt: hiệu ứng fade/zoom blur/lấp lánh (một khung), 10 thế mẫu, dáng bàn tay xòe/rock/ngón cái/chỉ ở tay giơ lên. Chưa kiểm tra: tất cả thế mẫu ở mọi góc xoay, hiệu ứng khung hình khi xuất video, chắp tay đan ngón.
