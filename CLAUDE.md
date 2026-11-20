@@ -1,5 +1,7 @@
 # CLAUDE.md — ngữ cảnh dự án Football Studio (đọc trước khi làm)
 
+> **ĐỌC TRƯỚC:** `docs/ban-giao-phien-may-tinh-2026-11-20.md` — ý tưởng và cách nghĩ của chủ dự án (biếm họa cực đoan, tự điều khiển bằng tay, camera chuyên nghiệp), cách làm việc đã chốt, việc đang mở, lệnh chạy, bẫy đã gặp.
+
 ## Dự án là gì
 Chủ dự án là người làm YouTube người Việt. Mục tiêu dài hạn: kênh bóng đá "faceless" (phân tích chiến thuật, chủ đề nóng, tổng hợp tuần) bằng hoạt hình 2D cartoon tự dựng. `app/football-studio.html` là **xưởng dựng cầu thủ**: một file HTML + JS + SVG thuần, không thư viện, chạy offline. Nhân vật chính hiện tại: Haaland (đầu cartoon do GPT vẽ, 5 góc).
 
