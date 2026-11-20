@@ -9,7 +9,8 @@ from PIL import Image
 html = sys.argv[1] if len(sys.argv) > 1 else 'app/football-studio.html'
 scale = float(sys.argv[2]) if len(sys.argv) > 2 else 0.5
 NAMES = ['xoe', 'nam_dam', 'chi_tro', 'rock', 'ngon_cai', 'phang', 'nam_cong', 'chu_v', 'ok', 'buong', 'ngua', 'ngoac',
-         'mu_xoe', 'ben_chi_tro', 'dan_ngon', 'chap_tay', 'nam_chat', 'ba_ngon', 'khum_ngua']  # tờ 2: chỉ nhúng các hình MỚI (bỏ hình lặp tờ 1)
+         'mu_xoe', 'ben_chi_tro', 'dan_ngon', 'chap_tay', 'nam_chat', 'ba_ngon', 'khum_ngua',
+         'ngon_cai_xuong', 'bon_ngon', 've_ngon', 'hai_ngon', 'dap_nguc', 'che_mieng', 'chu_L', 'ngon_ut', 'chi_ngang', 'qua_giang', 'xin_ngua']  # to 3 (bo bat tay: can xu ly rieng)  # tờ 2: chỉ nhúng các hình MỚI (bỏ hình lặp tờ 1)
 table = {}
 for n in NAMES:
     im = Image.open(f'assets/hands/tay_{n}.png').convert('RGBA')
@@ -20,11 +21,14 @@ for n in NAMES:
     two = n in ('dan_ngon', 'chap_tay')
     if two:                   # HAI bàn tay trong một hình: điểm neo giữa hai cổ tay ở đáy; ww = độ rộng MỘT cổ tay
         ax, ay, ww, dx, dy = w / 2.0, float(h), w * .28, 0.0, -1.0
-    elif n in ('ngon_cai', 'ben_chi_tro'):      # cổ tay ở bên TRÁI, bàn tay chỉ sang phải
+    elif n in ('che_mieng', 'chi_ngang'):      # co tay o ben PHAI, ban tay chi sang trai
+        sel = xs >= xs.max() - max(2, int(w * .06))
+        ax, ay, ww, dx, dy = float(xs.max()), float(ys[sel].mean()), float(ys[sel].max() - ys[sel].min()), -1.0, 0.0
+    elif n in ('ngon_cai', 'ben_chi_tro', 'ngon_cai_xuong', 'dap_nguc', 'hai_ngon'):      # cổ tay ở bên TRÁI, bàn tay chỉ sang phải
         sel = xs <= xs.min() + max(2, int(w * .06))
         ax, ay, ww, dx, dy = float(xs.min()), float(ys[sel].mean()), float(ys[sel].max() - ys[sel].min()), 1.0, 0.0
-        if n == 'ben_chi_tro': dx, dy = 0.78, -0.62
-    elif n in ('ngua', 'khum_ngua'):         # tay ngửa: cổ tay ở góc dưới-trái, bàn tay hướng lên-phải
+        if n in ('ben_chi_tro', 'hai_ngon'): dx, dy = 0.78, -0.62
+    elif n in ('ngua', 'khum_ngua', 'xin_ngua'):         # tay ngửa: cổ tay ở góc dưới-trái, bàn tay hướng lên-phải
         ax, ay, ww = w * .13, h * .80, h * .30
         v = np.array([.78, -.62]); v /= np.linalg.norm(v); dx, dy = float(v[0]), float(v[1])
     else:                     # cổ tay ở đáy, bàn tay hướng lên
