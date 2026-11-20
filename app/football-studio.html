@@ -855,6 +855,9 @@ function renderOne(target=fig,preview=true){
   // wrist plug into the cuff, then a hand that reads as a hand: palm + four finger knuckles along its far edge + a separate thumb.
   // The knuckles make the silhouette scalloped, so the direction of the hand is obvious from any side.
   const capProf=(L,r)=>{const o=[[0,r*.95],[Math.max(0,L-r*1.6),r]];for(const a of [20,40,60,78,90]){const q=a*Math.PI/180;o.push([L-r+r*Math.sin(q),r*Math.cos(q)])}return o};
+  // dáng ngón mới (khác 'tự nhiên'): ngón thon dần, mảnh hơn; mỗi ngón có viền riêng nên thấy rõ đường chia ngón
+  const capProf2=(L,r)=>{const r2=r*.8,o=[[0,r],[Math.max(0,L-r2*1.6),r2*.96]];for(const a of [20,40,60,78,90]){const q=a*Math.PI/180;o.push([L-r2+r2*Math.sin(q),r2*Math.cos(q)])}return o};
+  const fprof=(L,r)=>handShape==='auto'?capProf(L,r):capProf2(L*1.06,r*.8);
   const hs=1.35*(B.handS||100)/100,hl=B.hand*2.3*hs,hr=B.hand*1.0*hs;
   // hanging/vertical arm: hand width runs front-back (thumb forward); arm out to the side: palm faces the viewer so the fingers read clearly.
   // natural hand: the palm faces the body (arm hanging); with the arm held out sideways the palm faces down; thumb to the front
@@ -890,8 +893,8 @@ function renderOne(target=fig,preview=true){
    if(handShape==='point'||handShape==='rock'||handShape==='thumb'){
     // nắm đấm + duỗi riêng ngón: trỏ (hf0), út (hf2), cái (hthumb)
     const tipPos=start+length*.9,fr0=pt*.62;
-    const finger=(name,sp,tilt,len)=>mesh.shell(name,add3(along(e,hdir,tipPos),mul3(fw,sp*pw*.55)),axisUnit(add3(hdir,mul3(fw,sp*tilt))),capProf(len,fr0));
-    const thumbOut=(dirV,len)=>mesh.shell('hthumb',add3(along(e,hdir,start+length*.18),mul3(fw,pw*.62)),axisUnit(dirV),capProf(len,pt*.95));
+    const finger=(name,sp,tilt,len)=>mesh.shell(name,add3(along(e,hdir,tipPos),mul3(fw,sp*pw*.55)),axisUnit(add3(hdir,mul3(fw,sp*tilt))),fprof(len,fr0));
+    const thumbOut=(dirV,len)=>mesh.shell('hthumb',add3(along(e,hdir,start+length*.18),mul3(fw,pw*.62)),axisUnit(dirV),fprof(len,pt*.95));
     if(handShape==='point'){finger('hf0',1,0,hl*.82)}
     if(handShape==='rock'){finger('hf0',1,.3,hl*.74);finger('hf2',-1,.3,hl*.6);thumbOut(add3(mul3(fw,.9),mul3(hdir,.35)),hl*.5)}
     if(handShape==='thumb'){thumbOut(add3(mul3(fw,.95),mul3(hdir,.2)),hl*.62)}
@@ -917,9 +920,9 @@ function renderOne(target=fig,preview=true){
      const d1=axisUnit(add3(mul3(hdir,1),mul3(palmSide,hk*.9)));
      const e1=add3(base,mul3(d1,L1*.92));
      const d2=axisUnit(add3(mul3(hdir,handShape==='clasp'?-.1:-.45),mul3(palmSide,1)));
-     mesh.shell('hg'+i,base,d1,capProf(L1,fr));
-     mesh.shell('hh'+i,e1,d2,capProf(L2,fr*.92));
-    }else mesh.shell('hf'+i,base,direction,capProf(fl,fr));
+     mesh.shell('hg'+i,base,d1,fprof(L1,fr));
+     mesh.shell('hh'+i,e1,d2,fprof(L2,fr*.92));
+    }else mesh.shell('hf'+i,base,direction,fprof(fl,fr));
    }
    const thumbBase=add3(along(e,hdir,off0-pl*.05),mul3(fw,pw*.55));
    const thumbDir=axisUnit(add3(add3(mul3(hdir,.45+curl*.5),mul3(fw,(handShape==='spread'?1.15:handShape==='flat'?.25:.85)-curl)),mul3(nrm,.12)));
@@ -927,13 +930,14 @@ function renderOne(target=fig,preview=true){
    mesh.shell('hpalm',bridgeO,axisUnit(bridgeV),[[0,tipR*.95],[len3(bridgeV),pt*.95],[len3(bridgeV)+pt*.5,0]]);
    if(handShape==='grab'||handShape==='clasp'){
     const td=axisUnit(add3(add3(mul3(hdir,.55),mul3(palmSide,.65)),mul3(fw,handShape==='clasp'?-.1:.05)));
-    mesh.shell('hthumb',thumbBase,td,capProf(hl*(handShape==='clasp'?.5:.48),pt*.95));
-   }else mesh.shell('hthumb',thumbBase,thumbDir,capProf(hl*(.62-.24*curl),pt*.95));
+    mesh.shell('hthumb',thumbBase,td,fprof(hl*(handShape==='clasp'?.5:.48),pt*.95));
+   }else mesh.shell('hthumb',thumbBase,thumbDir,fprof(hl*(.62-.24*curl),pt*.95));
   }
   const paths=visibleParts(mesh);
-  return {sleeve:{path:paths.sleeve,fill:K.shirt},skin:{path:paths.skin||'',fill:K.skin},hand:[],fistLines,palm:{path:['closedFist','hpalm','hf0','hf1','hf2','hg0','hg1','hg2','hh0','hh1','hh2','hthumb'].map(n=>paths[n]||'').join(' '),fill:K.skin}};
+  return {sleeve:{path:paths.sleeve,fill:K.shirt},skin:{path:paths.skin||'',fill:K.skin},hand:[],fistLines,palm:{path:(handShape==='auto'?['closedFist','hpalm','hf0','hf1','hf2','hg0','hg1','hg2','hh0','hh1','hh2','hthumb']:['closedFist','hpalm']).map(n=>paths[n]||'').join(' '),fill:K.skin},fingers:handShape==='auto'?[]:['hf0','hf1','hf2','hg0','hg1','hg2','hh0','hh1','hh2','hthumb'].map(n=>paths[n]||'').filter(Boolean)};
  };
  const armGeometry={hL:armParts('hL'),hR:armParts('hR')};
+ const drawFingers=(tg,k)=>{for(const d of (armGeometry[k].fingers||[])){const g=el('g',{},tg);el('path',{d,fill:OUT,stroke:OUT,'stroke-width':OW*1.9,'stroke-linejoin':'round'},g);el('path',{d,fill:K.skin},g)}}; // mỗi ngón: viền ngoài rõ + nền da (không vẽ cạnh mặt trong)
  const drawHand=(tg,k)=>{for(const it of armGeometry[k].hand){const g=el('g',{},tg);el('path',{d:it.path,fill:OUT,stroke:OUT,'stroke-width':OW*1.3,'stroke-linejoin':'round'},g);el('path',{d:it.path,fill:it.fill},g)}};
  function drawFistInk(parent,k){
   const {fistLines,palm}=armGeometry[k];
@@ -1105,7 +1109,7 @@ function renderOne(target=fig,preview=true){
  const rearArms=arms.filter(k=>!frontArms.includes(k));
  const farSleeves=arms.filter(k=>sol[k].A.z < -B.wUpA*.35&&!frontArms.includes(k)); // an arm drawn in front of the body brings its own sleeve
  // arms that are behind the body are drawn FIRST, so the legs and the shirt hide them (the far hand never shows over the near thigh)
- for(const k of rearArms){drawHand(target,k);drawLayer(target,[armGeometry[k].skin,armGeometry[k].palm,...(farSleeves.includes(k)?[armGeometry[k].sleeve]:[])]);drawFistInk(target,k);if(farSleeves.includes(k))sleeveTrim(target,k)}
+ for(const k of rearArms){drawHand(target,k);drawLayer(target,[armGeometry[k].skin,armGeometry[k].palm,...(farSleeves.includes(k)?[armGeometry[k].sleeve]:[])]);drawFistInk(target,k);drawFingers(target,k);if(farSleeves.includes(k))sleeveTrim(target,k)}
  if(contacts.some(c=>c.lift>0))drawLayer(target,[{path:rimInside,fill:liningFill}]);
  const legSurfaces=legs.map(k=>legPaint(k).filter(it=>it.path).map((it,i)=>({...it,id:k+'-surface-'+i})));
  drawLayer(target,[{path:legPaths.shorts,fill:K.shorts},...legSurfaces.flat()]);
@@ -1246,7 +1250,7 @@ function renderOne(target=fig,preview=true){
  shortsTrim(over,legPaths.overshorts,'kit-over-shorts');
  for(const k of frontArms){
   const {skin,sleeve}=armGeometry[k];
-  drawHand(target,k);const farShoulder=sol[k].A.z < -B.wUpA*.35;drawLayer(target,[skin,armGeometry[k].palm]);drawFistInk(target,k);
+  drawHand(target,k);const farShoulder=sol[k].A.z < -B.wUpA*.35;drawLayer(target,[skin,armGeometry[k].palm]);drawFistInk(target,k);drawFingers(target,k);
   if(farShoulder&&sleeve.path)el('path',{d:sleeve.path,fill:sleeve.fill,stroke:sleeve.fill,'stroke-width':.8,'stroke-linejoin':'round'},target); // far shoulder: the cap melts into the shirt, no outline bubble
   if(!farShoulder&&sleeve.path){
    // The sleeve lies on the shirt: give it an outline, except around the shoulder joint where sleeve and shirt are one piece.
