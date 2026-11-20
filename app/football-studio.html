@@ -135,6 +135,10 @@ input[type=file]{font-size:12px;max-width:100%}
    <div class="row"><label>Lật bàn tay (xoay quanh cẳng tay) <b id="endRollVal">0°</b></label><input type="range" id="endRoll" min="-180" max="180" value="0"></div>
    <div class="row" id="endGripRow"><label for="endGrip">Độ nắm ngón tay <b id="endGripVal">0%</b></label><input type="range" id="endGrip" min="0" max="100" value="0"><button id="endFist" type="button">Nắm tay</button><button id="endOpen" type="button">Xòe tay</button></div>
    <div class="row" id="handShapeRow"><label for="handShape">Dáng bàn tay (ngón)</label><select id="handShape"><option value="auto">Tự nhiên (như cũ)</option><option value="spread">Xòe 5 ngón (tách rộng)</option><option value="flat">Khép sát (chắp tay)</option><option value="point">Chỉ ngón trỏ</option><option value="rock">Dấu rock (trỏ + út)</option><option value="thumb">Giơ ngón cái</option><option value="grab">Nắm vật / vải (ngón cong ôm)</option><option value="clasp">Chắp tay đan ngón</option><optgroup label="Tay vẽ sẵn (nét cartoon, ảnh)"><option value="sp_xoe">Xòe 5 ngón</option><option value="sp_nam_dam">Nắm đấm</option><option value="sp_chi_tro">Chỉ ngón trỏ</option><option value="sp_rock">Dấu rock</option><option value="sp_ngon_cai">Giơ ngón cái</option><option value="sp_phang">Bàn tay phẳng</option><option value="sp_nam_cong">Nắm cong (cầm vải/vật)</option><option value="sp_chu_v">Chữ V</option><option value="sp_ok">Dấu OK</option><option value="sp_buong">Buông thõng</option><option value="sp_ngua">Ngửa tay xin</option><option value="sp_ngoac">Ngoắc</option><option value="sp_mu_xoe">Mu bàn tay xòe</option><option value="sp_ben_chi_tro">Chỉ ngón (nghiêng)</option><option value="sp_nam_chat">Nắm chặt (nhìn từ mu)</option><option value="sp_ba_ngon">Ba ngón</option><option value="sp_khum_ngua">Khum ngửa (cầm bóng)</option><option value="sp_ngon_cai_xuong">Ngón cái xuống</option><option value="sp_bon_ngon">Bốn ngón</option><option value="sp_ve_ngon">Vê ngón (tiền / bắn tay)</option><option value="sp_hai_ngon">Hai ngón chỉ</option><option value="sp_dap_nguc">Tay phẳng đập ngực</option><option value="sp_che_mieng">Che miệng</option><option value="sp_chu_L">Chữ L</option><option value="sp_ngon_ut">Ngón út</option><option value="sp_chi_ngang">Chỉ ngang</option><option value="sp_qua_giang">Quá giang</option><option value="sp_xin_ngua">Ngửa xin</option><option value="sp_dan_ngon">HAI tay đan ngón (tự đưa 2 tay vào giữa)</option><option value="sp_chap_tay">HAI tay chắp (tự đưa 2 tay vào giữa)</option></optgroup></select></div>
+   <div id="handAdjBox"><div class="row"><label>Chỉnh riêng bàn tay vẽ sẵn (tay đang chọn)</label></div>
+    <div class="row"><label>Cỡ <input type="range" id="haS" min="40" max="220" value="100"></label><label>Dài <input type="range" id="haL" min="50" max="200" value="100"></label></div>
+    <div class="row"><label>Bè ngang <input type="range" id="haW" min="50" max="200" value="100"></label><label>Xoay <input type="range" id="haR" min="-90" max="90" value="0"></label></div>
+    <div class="row"><button id="haReset" type="button">Về mặc định</button></div></div>
    <div class="row" id="handColorRow"><label for="handColor">Màu bàn tay vẽ sẵn (găng)</label><input type="color" id="handColor" value="#f1c9a5"><button id="handColorOff" type="button">Dùng màu da</button></div>
    <div class="row"><button id="endReset">Về thẳng theo cẳng tay / chân</button></div>
   </div>
@@ -952,10 +956,10 @@ function renderOne(target=fig,preview=true){
   };
   // một bàn tay: gốc cổ tay LUÔN đặt đúng đầu cẳng tay, xoay theo cẳng tay (+ nghiêng cổ tay từ ô "Nghiêng sang bên")
   const placeOne=(tg,k,s,sp)=>{
-   const flip=k==='hL'?-1:1,dir=Math.hypot(s.dx,s.dy)>3?Math.atan2(s.dy,s.dx):-Math.PI/2;
-   const own=Math.atan2(sp.dy,sp.dx*flip),rot=(dir-own)*180/Math.PI-flip*(s.twist||0);
-   const sc=s.wristW*1.3*((B.handS||100)/100)/sp.ww,ov=sp.ww*.35; // ov: chồng lên cuối cẳng tay để che đường nối
-   drawSpriteLayers(tg,sp,`translate(${s.x},${s.y}) rotate(${rot}) scale(${flip*sc},${sc}) translate(${-(sp.ax+sp.dx*ov)},${-(sp.ay+sp.dy*ov)})`);
+   const flip=k==='hL'?-1:1,dir=Math.hypot(s.dx,s.dy)>3?Math.atan2(s.dy,s.dx):-Math.PI/2,ad=(P.handAdj&&P.handAdj[k])||{},aS=(ad.s||100)/100,aL=(ad.len||100)/100,aW=(ad.w||100)/100,aR=ad.rot||0,dd=dir*180/Math.PI;
+   const own=Math.atan2(sp.dy,sp.dx*flip),rot=(dir-own)*180/Math.PI-flip*(s.twist||0)+aR;
+   const sc=s.wristW*1.3*((B.handS||100)/100)/sp.ww*aS,ov=sp.ww*.35; // ov: chồng lên cuối cẳng tay để che đường nối
+   drawSpriteLayers(tg,sp,`translate(${s.x},${s.y}) rotate(${dd}) scale(${aL},${aW}) rotate(${-dd}) rotate(${rot}) scale(${flip*sc},${sc}) translate(${-(sp.ax+sp.dx*ov)},${-(sp.ay+sp.dy*ov)})`);
   };
   const drawHandSprite=(tg,k)=>{
    const s=armGeometry[k].sprite;if(!s)return;
@@ -1400,7 +1404,7 @@ $('mirror').onclick=()=>{ // mirror the 3D pose: swap sides, flip the sideways a
  P.limbs={hL:m(l.hR),hR:m(l.hL),fL:m(l.fR),fR:m(l.fL)};
  const q=P.poles;P.poles={hL:m(q.hR),hR:m(q.hL),fL:m(q.fR),fR:m(q.fL)};
  const en=P.ends||DEFAULT_POSE().ends,mt=a=>[a[0],-a[1],-(a[2]||0),a[3]||0]; // mirroring flips the sideways twist
- P.ends={hL:mt(en.hR),hR:mt(en.hL),fL:mt(en.fR),fR:mt(en.fL)};{const as=P.armSide||{};P.armSide={hL:as.hR||'auto',hR:as.hL||'auto'}}{const hs=P.handShape||{};P.handShape={hL:hs.hR||'auto',hR:hs.hL||'auto'}}
+ P.ends={hL:mt(en.hR),hR:mt(en.hL),fL:mt(en.fR),fR:mt(en.fL)};{const as=P.armSide||{};P.armSide={hL:as.hR||'auto',hR:as.hL||'auto'}}{const hs=P.handShape||{};P.handShape={hL:hs.hR||'auto',hR:hs.hL||'auto'}}{const ha=P.handAdj;if(ha){const n={};if(ha.hR)n.hL=Object.assign({},ha.hR,{rot:-(ha.hR.rot||0)});if(ha.hL)n.hR=Object.assign({},ha.hL,{rot:-(ha.hL.rot||0)});P.handAdj=n}}
  P.type=[0,1,3,2][P.type];P.rotFine=-P.rotFine;P.yaw=wrap(-P.yaw);
  S.head.yaw=wrap(-(S.head.yaw||0));S.head.rot=wrap(-S.head.rot);syncAll();render();
 };
@@ -1449,7 +1453,7 @@ function syncEnds(){
  const e=S.pose.ends[S.endSel]||[0,0,0];e[2]=e[2]||0;
  const hand=S.endSel.startsWith('h');
  $('endGripRow').style.display=hand?'':'none';
- $('handShapeRow').style.display=hand?'':'none';$('handColorRow').style.display=hand?'':'none';{const hc=$('handColor');if(hc)hc.value=/^#[0-9a-f]{6}$/i.test(S.look.handColor||S.look.skin||'')?(S.look.handColor||S.look.skin):'#f1c9a5'}if(hand)$('handShape').value=((S.pose.handShape||{})[S.endSel])||'auto';
+ $('handShapeRow').style.display=hand?'':'none';$('handColorRow').style.display=hand?'':'none';$('handAdjBox').style.display=hand?'':'none';{const ad=(S.pose.handAdj&&S.pose.handAdj[S.endSel])||{};$('haS').value=ad.s||100;$('haL').value=ad.len||100;$('haW').value=ad.w||100;$('haR').value=ad.rot||0}{const hc=$('handColor');if(hc)hc.value=/^#[0-9a-f]{6}$/i.test(S.look.handColor||S.look.skin||'')?(S.look.handColor||S.look.skin):'#f1c9a5'}if(hand)$('handShape').value=((S.pose.handShape||{})[S.endSel])||'auto';
  $('endGrip').value=e[3]||0;$('endGripVal').textContent=Math.round(e[3]||0)+'%';
  $('endRoll').value=e[2];$('endRollVal').textContent=Math.round(e[2])+'°';
  [...$('endBtns').children].forEach(b=>b.classList.toggle('on',b.dataset.k===S.endSel));
@@ -1906,6 +1910,8 @@ poseInit();
   syncAll();
  }
  render()}
+ {const setA=(f,id)=>{$(id).oninput=e=>{S.pose.handAdj=S.pose.handAdj||{};const o=S.pose.handAdj[S.endSel]=S.pose.handAdj[S.endSel]||{};o[f]=+e.target.value;render()}};setA('s','haS');setA('len','haL');setA('w','haW');setA('rot','haR');
+  $('haReset').onclick=()=>{if(S.pose.handAdj)delete S.pose.handAdj[S.endSel];syncEnds();render()}}
  const hc=$('handColor');if(hc)hc.oninput=e=>{S.look.handColor=e.target.value;render()};
  const hco=$('handColorOff');if(hco)hco.onclick=()=>{delete S.look.handColor;syncEnds();render()};
 }
