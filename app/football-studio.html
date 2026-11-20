@@ -245,7 +245,7 @@ const GROUND=640, SHOE=14, OUT='#101418';
 const L={upA:72,foreA:66,thigh:98,shin:92};
 // Torso anchors in its own space (facing the viewer, upright), origin at the hip centre.
 // Body proportions (all editable in the "THÂN HÌNH" panel): bone lengths, thicknesses, torso shape.
-const DEF_BODY={shortHem:0,sleeveHem:53,upA:72,foreA:66,thigh:98,shin:92,wUpA:30,wFore:24,wThigh:40,wShin:28,hand:14,shoe:21,neck:16,chest:44,waist:40,hipW:46,torsoH:146,depthK:75,depthW:75,depthH:70,gluteDepth:0,shW:100,depthS:75,holeW:24,holeD:24,holeS:24,gap:0,handS:100,footS:100,shDrop:0,holeAuto:1,ow:100};
+const DEF_BODY={shortHem:0,sleeveHem:53,upA:72,foreA:66,thigh:98,shin:92,wUpA:30,wFore:24,wThigh:40,wShin:28,hand:14,shoe:21,neck:16,chest:44,waist:40,hipW:46,torsoH:146,depthK:75,depthW:75,depthH:70,gluteDepth:0,shW:100,depthS:75,holeW:24,holeD:24,holeS:24,gap:0,handS:100,footS:100,shDrop:0,holeAuto:1,ow:100,shY:0,round:0};
 // Printed items (decals). front: 3 slots on the shirt (slot 1 = the big number), shorts: 1 slot, back: name + number.
 // x = % of half chest width (shorts: of hip width), y = % of torso height ABOVE the hip, size = % of the base size, rot = degrees.
 const DECAL_DEF={
@@ -260,7 +260,8 @@ const DECAL_NAMES=[['f1','Áo trước: ô 1 (số 9)'],['f2','Áo trước: ô 
 const dget=id=>{const r=Object.assign({},DECAL_DEF[id],(S.decals||{})[id]);if(id==='sh'&&!(((S.decals||{}).sh||{}).leg)){r.x=DECAL_DEF.sh.x;r.y=DECAL_DEF.sh.y;r.leg='fL'}return r};
 const BODY_UI=[
  // Sắp theo BỘ PHẬN như trình tạo nhân vật trong game: mỗi nhóm = một phần cơ thể. Gõ số vào ô bên cạnh để vượt giới hạn thanh trượt.
- ['VAI',[['Rộng vai (nhìn trước, % ngực)','shW',50,120],['Dày vai (nhìn nghiêng)','depthS',20,130],['Độ dốc vai (0 = bằng)','shDrop',0,150]]],
+ ['VAI',[['Vai cao (+) / chùng (-)','shY',-60,60],['Rộng vai (nhìn trước, % ngực)','shW',50,120],['Dày vai (nhìn nghiêng)','depthS',20,130],['Độ dốc vai (0 = bằng)','shDrop',0,150]]],
+ ['DÁNG THÂN',[['Bo tròn viền áo (%)','round',0,100]]],
  ['NGỰC / LƯNG',[['Rộng ngực (bề ngang)','chest',26,70],['Dày ngực (nhìn nghiêng)','depthK',30,130]]],
  ['EO / BỤNG',[['Rộng eo','waist',22,64],['Dày eo (nhìn nghiêng)','depthW',30,130]]],
  ['HÔNG / MÔNG',[['Rộng hông','hipW',28,70],['Dày hông (nhìn nghiêng)','depthH',30,130],['Độ nhô mông','gluteDepth',-25,55]]],
@@ -282,7 +283,7 @@ const BODY_TYPES=[
  ['Khổng lồ',{w:2,l:2}]
 ];
 // Torso anchors in its own space (facing the viewer, upright), origin at the hip centre; follow the proportions.
-function base(){const b=S.body;return{neck:[0,-b.torsoH],shL:[-(b.chest-4),-(b.torsoH-20)],shR:[b.chest-4,-(b.torsoH-20)],hipL:[-b.hipW*.43,34+b.gap],hipR:[b.hipW*.43,34+b.gap]}}
+function base(){const b=S.body;return{neck:[0,-b.torsoH],shL:[-(b.chest-4),-(b.torsoH-20)-(b.shY||0)],shR:[b.chest-4,-(b.torsoH-20)-(b.shY||0)],hipL:[-b.hipW*.43,34+b.gap],hipR:[b.hipW*.43,34+b.gap]}}
 // Which anchor each hand/foot hangs from.
 const LIMB={hL:'shL',hR:'shR',fL:'hipL',fR:'hipR'};
 const TORSOS=[
@@ -319,6 +320,22 @@ function syncBackdrop(){
 }
 for(const [value,id] of Object.entries(backdrops)){
  $(id).onclick=()=>{S.backdrop=value;syncBackdrop();scheduleSave()};
+}
+// làm tròn một đường path: lấy mẫu dọc đường rồi làm mượt vòng kín (mỗi M...Z xử lý riêng); amount 0..100
+let _rpEl=null;
+function roundPath(d,amount){
+ if(!_rpEl)_rpEl=document.createElementNS(NS,'path');
+ const subs=d.split(/(?=M)/).filter(s=>s.trim());let out='';
+ for(const s of subs){
+  _rpEl.setAttribute('d',s);let L=0;try{L=_rpEl.getTotalLength()}catch(e){}
+  if(!(L>1)){out+=s;continue}
+  const n=Math.max(60,Math.min(260,Math.round(L/3))),pts=[];
+  for(let i=0;i<n;i++){const p=_rpEl.getPointAtLength(L*i/n);pts.push([p.x,p.y])}
+  const w=Math.max(1,Math.round(n*amount/100*.09)),m=[];
+  for(let i=0;i<n;i++){let x=0,y=0;for(let k=-w;k<=w;k++){const q=pts[(i+k+n)%n];x+=q[0];y+=q[1]}m.push([x/(2*w+1),y/(2*w+1)])}
+  out+='M'+m.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join('L')+'Z';
+ }
+ return out;
 }
 function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
 const rad=d=>d*Math.PI/180;
@@ -1046,11 +1063,12 @@ function renderOne(target=fig,preview=true){
  const rimInside=`M${hemPoint(0)} ${hemCurve} L${hemPoint(1,true)} ${hemArc(true,true)} Z`;
  const profile=Math.abs(V.s)**3;
  const top=(x,y,f)=>M(x*(1-(x*V.s>0?.22:.07)*profile),y+(x*V.s>0?6:2)*profile,f);
- const shoulderY=x=>-th-3+profile*(x*V.s>0?9:3);
+ const shY0=B.shY||0;
+ const shoulderY=x=>-th-3-shY0+profile*(x*V.s>0?9:3);
  const shoulder=x=>top(x,shoulderY(x),fxC);
  const capStart=x=>M(x*(1-.12*profile),shoulderY(x)+1,fxC);
 
- const dr0=(B.shDrop==null?0:B.shDrop)/100,dr=dr0*(1-profile)+profile,yA=-th*(1-.10*dr),yB=-th*(1-.23*dr); // turned to the side the shoulder keeps its original shape (no spikes)
+ const dr0=(B.shDrop==null?0:B.shDrop)/100,dr=dr0*(1-profile)+profile,yA=-th*(1-.10*dr)-shY0,yB=-th*(1-.23*dr)-shY0*.6; // turned to the side the shoulder keeps its original shape (no spikes)
  const rightSide=`C${capStart(so*1.12)} ${top(ch*1.04,yA,fxS)} ${M(ch,yB)}
   C${M(ch*.95,-th*.53)} ${sideGuide(1)} ${hem(wa,9)}
   Q${hem(wa,14)} ${hemPoint(0)}`;
@@ -1060,10 +1078,11 @@ function renderOne(target=fig,preview=true){
  // The neckline is one continuous curve with a shallower scoop in profile.
  const scoop=Math.max(3,hd*(1-.5*Math.abs(V.s))*.48);
  const collarY=(x,y)=>y*(1-profile)+(3+3*x*V.s)*profile;
- const shirt=`M${shoulder(-so)}
+ const shirt0=`M${shoulder(-so)}
   C${Mo(-hw2,-th+collarY(-1,-5))} ${Mo(-hw2*.78,-th+collarY(-.78,scoop))} ${Mo(0,-th+collarY(0,scoop))}
   C${Mo(hw2*.78,-th+collarY(.78,scoop))} ${Mo(hw2,-th+collarY(1,-5))} ${shoulder(so)}
   ${rightSide} ${hemCurve} ${leftSide} Z`;
+ const shirt=B.round>0?roundPath(shirt0,B.round):shirt0;   // 'Bo tròn thân': viền áo mềm như tranh vẽ tay (mặc định 0 = như cũ)
  const G=B.gap;
  const neckTop=project(add3(anchor3('neck'),[0,-B.neck*1.1,0]));
  // The shirt face covers the upper half of the opening. The exposed lower
