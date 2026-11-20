@@ -2,13 +2,16 @@
 // Dùng: node tools/render_film.js <phim.json> <thu_muc_ra> [fps=24] [giay_dau_tien_muon_xem] [khung_le=giay1,giay2,...]
 //   khung_le: chỉ chụp vài khung PNG (để xem nhanh), không ghép video.
 // Cần: Node + playwright + ffmpeg. App dùng: app/football-studio.html (file gốc, không sửa).
-const { chromium } = require('playwright'), path = require('path'), fs = require('fs'), { execFileSync } = require('child_process');
+const path = require('path'), fs = require('fs'), { execFileSync } = require('child_process');
+// playwright đầy đủ nếu có; không thì playwright-core + trình duyệt có sẵn (Chrome/Edge) — đặt BROWSER_EXE để chỉ định
+let chromium; try { ({ chromium } = require('playwright')); } catch (e) { ({ chromium } = require(process.env.PW_CORE || 'playwright-core')); }
+const EXE = process.env.BROWSER_EXE || ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(p => fs.existsSync(p));
 const [json, out = 'out', fpsArg = '24', maxArg, only] = process.argv.slice(2);
 if (!json) { console.log('Thieu file phim JSON'); process.exit(1); }
 const fps = +fpsArg, app = 'file://' + path.resolve(__dirname, '../app/football-studio.html') + '?nosave';
 (async () => {
   fs.mkdirSync(out, { recursive: true }); const fr = path.join(out, 'frames'); fs.mkdirSync(fr, { recursive: true });
-  const b = await chromium.launch(), p = await b.newPage({ viewport: { width: 600, height: 1067 }, deviceScaleFactor: 1.8 });
+  const b = await chromium.launch(EXE ? { executablePath: EXE } : {}), p = await b.newPage({ viewport: { width: 600, height: 1067 }, deviceScaleFactor: 1.8 });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto(app);
   await p.setInputFiles('#jsonFile', json);

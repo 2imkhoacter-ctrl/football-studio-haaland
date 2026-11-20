@@ -75,7 +75,7 @@ const sign = Object.assign(mannequin('#2a2a2a', '#1d1d1d'), {
   spec: { pos: fixPos(CARRY_X + 1.5, Z0 - 0.6), head: [[0, 0], [15, 0]], stance: 1, runSpeed: 3.5, blink: 2, seed: 7, ges: [], jumps: [], faces: [],
     mod: (t, key, c) => { const k = c.ka; key.limbs.hL = [-30 * k, 75 * k, 62 * k]; key.limbs.hR = [30 * k, 75 * k, 62 * k]; } },
 });
-const crowdX = [-2.6, -3.0, -3.4, -2.8, -3.2, -3.6, -2.4];
+const crowdX = (process.env.LIGHT === '0') ? [-2.6, -3.0, -3.4, -2.8, -3.2, -3.6, -2.4] : [-2.8, -3.3, -3.8];   // bản nhẹ: 3 người (mỗi diễn viên tốn thời gian vẽ)
 const crowd = crowdX.map((x, i) => Object.assign(mannequin(i % 2 ? '#1a3b8f' : '#8f1a3b', '#1a3b8f'), {
   spec: { pos: fixPos(x, Z0 - 0.4 - (i % 3) * 0.4), head: [[0, 0], [15, 0]], stance: 1, runSpeed: 3.5, blink: i, seed: 11 + i, ges: [], jumps: [], faces: [],
     mod: (t, key, c) => { const k = c.ka, w = wave(t, i * 1.3); if (t > 11.5) { key.limbs.hR = [-60 * k, -60 * k + 25 * k * w, 20 * k]; if (i % 2) key.limbs.hL = [60 * k, -60 * k + 25 * k * w, 20 * k]; } } },
