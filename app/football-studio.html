@@ -955,7 +955,13 @@ function renderOne(target=fig,preview=true){
   // 'front/back' are relative to the player's chest: they only force the order while the camera really sees the chest (or the back); from the side the near arm hides the far one as usual.
   const cs=view().c;
   // the arm whose shoulder is on the far side stays behind the chest in a turned view (its sleeve can't float over the shirt)
-  if(side==='front')return (A.z < -B.wUpA*.35)?auto:(cs>.35?true:auto);
+  if(side==='front'){
+   // tay đưa RA TRƯỚC ngực (bàn tay nằm phía trước mặt phẳng ngực trong khung thân) phải vẽ ĐÈ lên thân ở mọi góc nhìn ngang/3-4, kể cả vai xa:
+   // nếu không thân sẽ che cẳng tay và tay chỉ "ló" ra với một đường cắt phẳng (ôm/bế người khác ở góc ngang).
+   const fz=((S.pose.limbs||{})[k]||[0,0,0])[2];
+   if(fz>B.wUpA*.3&&cs>-.35)return true;
+   return (A.z < -B.wUpA*.35)?auto:(cs>.35?true:auto);
+  }
   if(side==='back')return cs<-.35?true:(cs>.35?false:auto);
   return auto;
  };
