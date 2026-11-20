@@ -113,3 +113,4 @@ Thẻ "Vật phẩm & nền" → hộp CAMERA. Bật "Dùng camera thật" (`sce
 - Nét viền tay 3D mảnh (2026-11-20): hằng `HK=.95` (nhân OW) cho cả lòng bàn tay (vẽ riêng trong `hand`, dưới lớp cẳng tay) và ngón. Muốn mảnh/dày hơn thì đổi HK.
 - Tay 3D chỉ có viền bao ngoài (2026-11-20): palm + ngón + ngón cái nằm chung lớp `palm` (drawLayer vẽ mọi viền trước rồi mọi nền) nên không có nét giữa các ngón, không có vòng nét ở cổ tay; `HK` không còn dùng. Ngón mảnh hơn (fr0=.19W) và xòe rộng hơn để thấy khe ngón; bàn tay to hơn (W=max(1.55 tipR, .95 hand)).
 - Tay 3D mượt viền (2026-11-20): `socketMesh(N)` nhận số cạnh vòng (mesh tay dùng 40, mặc định 20), lòng bàn tay dựng 17 vòng theo đường cong, ngón/ngón cái dùng `cap3` (đầu ngón tròn nhiều bước). Một lần `render` đo ~290 ms trên máy thử; chưa so với trước khi tăng độ mịn.
+- Tay Tự nhiên (auto) mượt hơn (2026-11-20): `capProf/capProf2` đầu ngón chia 8 bước, mesh tay 40 cạnh. Hình dáng không đổi, chỉ viền mượt hơn; vẫn mặc định.
