@@ -1486,7 +1486,7 @@ function syncEnds(){
  const e=S.pose.ends[S.endSel]||[0,0,0];e[2]=e[2]||0;
  const hand=S.endSel.startsWith('h');
  $('endGripRow').style.display=hand?'':'none';
- $('handShapeRow').style.display=hand?'':'none';$('handColorRow').style.display=hand?'':'none';$('handAdjBox').style.display=hand?'':'none';{const ad=(S.pose.handAdj&&S.pose.handAdj[S.endSel])||{};$('haS').value=ad.s||100;$('haL').value=ad.len||100;$('haW').value=ad.w||100;$('haR').value=ad.rot||0}{const hc=$('handColor');if(hc)hc.value=/^#[0-9a-f]{6}$/i.test(S.look.handColor||S.look.skin||'')?(S.look.handColor||S.look.skin):'#f1c9a5'}if(hand)$('handShape').value=((S.pose.handShape||{})[S.endSel])||'auto';
+ $('handShapeRow').style.display=hand?'':'none';$('handColorRow').style.display=hand?'':'none';$('handAdjBox').style.display=(hand&&String((S.pose.handShape||{})[S.endSel]||'').startsWith('sp_'))?'':'none';{const ad=(S.pose.handAdj&&S.pose.handAdj[S.endSel])||{};$('haS').value=ad.s||100;$('haL').value=ad.len||100;$('haW').value=ad.w||100;$('haR').value=ad.rot||0}{const hc=$('handColor');if(hc)hc.value=/^#[0-9a-f]{6}$/i.test(S.look.handColor||S.look.skin||'')?(S.look.handColor||S.look.skin):'#f1c9a5'}if(hand)$('handShape').value=((S.pose.handShape||{})[S.endSel])||'auto';
  $('endGrip').value=e[3]||0;$('endGripVal').textContent=Math.round(e[3]||0)+'%';
  $('endRoll').value=e[2];$('endRollVal').textContent=Math.round(e[2])+'°';
  [...$('endBtns').children].forEach(b=>b.classList.toggle('on',b.dataset.k===S.endSel));
@@ -1942,7 +1942,7 @@ poseInit();
   S.pose.limbs.hL=[52*ka,25*ka,92*ka];S.pose.limbs.hR=[-52*ka,25*ka,92*ka];S.pose.poles.hL=[-.25,1,-.15];S.pose.poles.hR=[.25,1,-.15];
   syncAll();
  }
- render()}
+ syncEnds();render()}
  {const setA=(f,id)=>{$(id).oninput=e=>{S.pose.handAdj=S.pose.handAdj||{};const o=S.pose.handAdj[S.endSel]=S.pose.handAdj[S.endSel]||{};o[f]=+e.target.value;render()}};setA('s','haS');setA('len','haL');setA('w','haW');setA('rot','haR');
   $('haReset').onclick=()=>{if(S.pose.handAdj)delete S.pose.handAdj[S.endSel];syncEnds();render()}}
  const hc=$('handColor');if(hc)hc.oninput=e=>{S.look.handColor=e.target.value;render()};
