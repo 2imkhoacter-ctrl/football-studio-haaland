@@ -941,26 +941,27 @@ function renderOne(target=fig,preview=true){
    }else mesh.shell('hthumb',thumbBase,thumbDir,fprof(hl*(.62-.24*curl),pt*.95));
   }
   const paths=visibleParts(mesh);
-  return {sleeve:{path:paths.sleeve,fill:K.shirt},skin:{path:paths.skin||'',fill:K.skin},hand:[],fistLines:spr?'':fistLines,palm:{path:(spr?[]:handShape==='auto'?['closedFist','hpalm','hf0','hf1','hf2','hg0','hg1','hg2','hh0','hh1','hh2','hthumb']:['closedFist','hpalm']).map(n=>paths[n]||'').join(' '),fill:K.skin},sprite:spr?{spr,hand:handShape,x:project(e)[0],y:project(e)[1],dx:project(e)[0]-project(j)[0],dy:project(e)[1]-project(j)[1],wristW:tipR*2,twist:ht}:null,fingers:(handShape==='auto'||spr)?[]:['hf0','hf1','hf2','hg0','hg1','hg2','hh0','hh1','hh2','hthumb'].map(n=>paths[n]||'').filter(Boolean)};
+  return {sleeve:{path:paths.sleeve,fill:K.shirt},skin:{path:paths.skin||'',fill:K.skin},hand:[],fistLines:spr?'':fistLines,palm:{path:(spr?[]:handShape==='auto'?['closedFist','hpalm','hf0','hf1','hf2','hg0','hg1','hg2','hh0','hh1','hh2','hthumb']:['closedFist','hpalm']).map(n=>paths[n]||'').join(' '),fill:K.skin},sprite:spr?{spr,hand:handShape,x:project(e)[0],y:project(e)[1],dx:project(e)[0]-project(j)[0],dy:project(e)[1]-project(j)[1],wristW:tipR*2,twist:ht,nz:nrm[2]}:null,fingers:(handShape==='auto'||spr)?[]:['hf0','hf1','hf2','hg0','hg1','hg2','hh0','hh1','hh2','hthumb'].map(n=>paths[n]||'').filter(Boolean)};
  };
  const armGeometry={hL:armParts('hL'),hR:armParts('hR')};
  const drawFingers=(tg,k)=>{for(const d of (armGeometry[k].fingers||[])){const g=el('g',{},tg);el('path',{d,fill:OUT,stroke:OUT,'stroke-width':OW*1.9,'stroke-linejoin':'round'},g);el('path',{d,fill:K.skin},g)}}; // mỗi ngón: viền ngoài rõ + nền da (không vẽ cạnh mặt trong)
-  const handColor=()=>K.handColor||K.skin; // màu bàn tay vẽ sẵn: màu riêng (găng) hoặc màu da
+  const handColor=()=>K.handColor||K.skin;
+  const shade=(c,f)=>{const m=/^#?([0-9a-f]{6})$/i.exec(c||'');if(!m)return c;const n=parseInt(m[1],16);return '#'+[16,8,0].map(b=>Math.round(((n>>b)&255)*f).toString(16).padStart(2,'0')).join('')}; // màu bàn tay vẽ sẵn: màu riêng (găng) hoặc màu da
   // tay vẽ sẵn gồm HAI lớp: hình khối (tô bằng màu tay, đổi tùy ý) + nét viền đen trong suốt
-  const drawSpriteLayers=(tg,sp,transform)=>{
+  const drawSpriteLayers=(tg,sp,transform,dark)=>{
    const g=el('g',{transform},tg),fid='hfl'+(renderOne.hs=(renderOne.hs||0)+1);
    const fl=el('filter',{id:fid,x:'0%',y:'0%',width:'100%',height:'100%','color-interpolation-filters':'sRGB'},g);
-   el('feFlood',{'flood-color':handColor(),result:'c'},fl);el('feComposite',{in:'c',in2:'SourceGraphic',operator:'in'},fl);
+   el('feFlood',{'flood-color':dark?shade(handColor(),.9):handColor(),result:'c'},fl);el('feComposite',{in:'c',in2:'SourceGraphic',operator:'in'},fl);
    el('image',{href:sp.fl,width:sp.w,height:sp.h,filter:'url(#'+fid+')'},g);
    el('image',{href:sp.src,width:sp.w,height:sp.h},g);
   };
   // một bàn tay: gốc cổ tay LUÔN đặt đúng đầu cẳng tay, xoay theo cẳng tay (+ nghiêng cổ tay từ ô "Nghiêng sang bên")
   const placeOne=(tg,k,s,sp)=>{
-   const flip=k==='hL'?-1:1,dir=Math.hypot(s.dx,s.dy)>3?Math.atan2(s.dy,s.dx):-Math.PI/2,ad=(P.handAdj&&P.handAdj[k])||{},aS=(ad.s||100)/100,aL=(ad.len||100)/100,aW=(ad.w||100)/100,aR=ad.rot||0,dd=dir*180/Math.PI;
+   const back=(s.nz||0)>0,wf=Math.max(.22,Math.abs(s.nz||0)),flip=(k==='hL'?-1:1)*(back?-1:1),dir=Math.hypot(s.dx,s.dy)>3?Math.atan2(s.dy,s.dx):-Math.PI/2,ad=(P.handAdj&&P.handAdj[k])||{},aS=(ad.s||100)/100,aL=(ad.len||100)/100,aW=(ad.w||100)/100,aR=ad.rot||0,dd=dir*180/Math.PI;
    const own=Math.atan2(sp.dy,sp.dx*flip),rot=(dir-own)*180/Math.PI-flip*(s.twist||0)+aR;
    const sc=s.wristW*1.05*((B.handS||100)/100)/sp.ww*aS,ov=sp.ww*.7; // cổ tay cắm sâu vào lỗ cẳng tay (nằm dưới cẳng tay nên không lộ nét)
  // ov: chồng lên cuối cẳng tay để che đường nối
-   drawSpriteLayers(tg,sp,`translate(${s.x},${s.y}) rotate(${dd}) scale(${aL},${aW}) rotate(${-dd}) rotate(${rot}) scale(${flip*sc},${sc}) translate(${-(sp.ax+sp.dx*ov)},${-(sp.ay+sp.dy*ov)})`);
+   drawSpriteLayers(tg,sp,`translate(${s.x},${s.y}) rotate(${dd}) scale(${aL},${aW*wf}) rotate(${-dd}) rotate(${rot}) scale(${flip*sc},${sc}) translate(${-(sp.ax+sp.dx*ov)},${-(sp.ay+sp.dy*ov)})`,back);
   };
   const drawHandSprite=(tg,k)=>{
    const s=armGeometry[k].sprite;if(!s)return;
