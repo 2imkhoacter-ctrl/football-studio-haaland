@@ -1,3 +1,4 @@
+const { ShortTemplate } = require('./ShortTemplate');
 const React = require('react');
 const { useRef, useState, useEffect } = React;
 const { Composition, registerRoot, AbsoluteFill, staticFile, useCurrentFrame, useVideoConfig, interpolate, spring, delayRender, continueRender } = require('remotion');
@@ -122,5 +123,5 @@ const GoalScene = () => (
 );
 
 const Goal2Scene = () => (<AbsoluteFill style={{ background: '#101c38', overflow: 'hidden' }}><Studio anim="goal2.json" castCount={4} tall /></AbsoluteFill>);
-const Root = () => (<><Composition id="FootballPOC" component={Scene} durationInFrames={300} fps={30} width={1080} height={1920} /><Composition id="Goal2" component={Goal2Scene} durationInFrames={360} fps={24} width={1080} height={1920} /><Composition id="Goal" component={GoalScene} durationInFrames={432} fps={24} width={1080} height={1920} /><Composition id="Film" component={FilmScene} durationInFrames={1440} fps={24} width={1080} height={1920} /></>);
+const Root = () => (<><Composition id="FootballPOC" component={Scene} durationInFrames={300} fps={30} width={1080} height={1920} /><Composition id="Goal2" component={Goal2Scene} durationInFrames={360} fps={24} width={1080} height={1920} /><Composition id="Goal" component={GoalScene} durationInFrames={432} fps={24} width={1080} height={1920} /><Composition id="Film" component={FilmScene} durationInFrames={1440} fps={24} width={1080} height={1920} /><Composition id="ShortTemplate" component={ShortTemplate} durationInFrames={288} fps={24} width={1080} height={1920} /></>);
 registerRoot(Root);
