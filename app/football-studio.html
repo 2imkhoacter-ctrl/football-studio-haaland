@@ -958,7 +958,8 @@ function renderOne(target=fig,preview=true){
   const placeOne=(tg,k,s,sp)=>{
    const flip=k==='hL'?-1:1,dir=Math.hypot(s.dx,s.dy)>3?Math.atan2(s.dy,s.dx):-Math.PI/2,ad=(P.handAdj&&P.handAdj[k])||{},aS=(ad.s||100)/100,aL=(ad.len||100)/100,aW=(ad.w||100)/100,aR=ad.rot||0,dd=dir*180/Math.PI;
    const own=Math.atan2(sp.dy,sp.dx*flip),rot=(dir-own)*180/Math.PI-flip*(s.twist||0)+aR;
-   const sc=s.wristW*1.3*((B.handS||100)/100)/sp.ww*aS,ov=sp.ww*.35; // ov: chồng lên cuối cẳng tay để che đường nối
+   const sc=s.wristW*1.05*((B.handS||100)/100)/sp.ww*aS,ov=sp.ww*.7; // cổ tay cắm sâu vào lỗ cẳng tay (nằm dưới cẳng tay nên không lộ nét)
+ // ov: chồng lên cuối cẳng tay để che đường nối
    drawSpriteLayers(tg,sp,`translate(${s.x},${s.y}) rotate(${dd}) scale(${aL},${aW}) rotate(${-dd}) rotate(${rot}) scale(${flip*sc},${sc}) translate(${-(sp.ax+sp.dx*ov)},${-(sp.ay+sp.dy*ov)})`);
   };
   const drawHandSprite=(tg,k)=>{
@@ -968,7 +969,7 @@ function renderOne(target=fig,preview=true){
     if(!L||!Rr||L.hand!==Rr.hand||Math.hypot(L.x-Rr.x,L.y-Rr.y)>(L.wristW+Rr.wristW)*1.6){placeOne(tg,k,s,HAND_SPRITES.phang);return}
     if(k!=='hR')return;
     const sp2=s.spr,mx=(L.x+Rr.x)/2,my=(L.y+Rr.y)/2,ddx=(L.dx+Rr.dx)/2,ddy=(L.dy+Rr.dy)/2,dir2=Math.hypot(ddx,ddy)>3?Math.atan2(ddy,ddx):-Math.PI/2;
-    const rot2=(dir2-Math.atan2(sp2.dy,sp2.dx))*180/Math.PI,sc2=(L.wristW+Rr.wristW)/2*1.05*((B.handS||100)/100)/sp2.ww,ov2=sp2.ww*.35;
+    const rot2=(dir2-Math.atan2(sp2.dy,sp2.dx))*180/Math.PI,sc2=(L.wristW+Rr.wristW)/2*.85*((B.handS||100)/100)/sp2.ww,ov2=sp2.ww*.7;
     drawSpriteLayers(tg,sp2,`translate(${mx},${my}) rotate(${rot2}) scale(${sc2},${sc2}) translate(${-(sp2.ax+sp2.dx*ov2)},${-(sp2.ay+sp2.dy*ov2)})`);
     return;
    }
@@ -1145,7 +1146,7 @@ function renderOne(target=fig,preview=true){
  const rearArms=arms.filter(k=>!frontArms.includes(k));
  const farSleeves=arms.filter(k=>sol[k].A.z < -B.wUpA*.35&&!frontArms.includes(k)); // an arm drawn in front of the body brings its own sleeve
  // arms that are behind the body are drawn FIRST, so the legs and the shirt hide them (the far hand never shows over the near thigh)
- for(const k of rearArms){drawHand(target,k);drawLayer(target,[armGeometry[k].skin,armGeometry[k].palm,...(farSleeves.includes(k)?[armGeometry[k].sleeve]:[])]);drawFistInk(target,k);drawFingers(target,k);drawHandSprite(target,k);if(farSleeves.includes(k))sleeveTrim(target,k)}
+ for(const k of rearArms){drawHand(target,k);drawHandSprite(target,k);drawLayer(target,[armGeometry[k].skin,armGeometry[k].palm,...(farSleeves.includes(k)?[armGeometry[k].sleeve]:[])]);drawFistInk(target,k);drawFingers(target,k);if(farSleeves.includes(k))sleeveTrim(target,k)}
  if(contacts.some(c=>c.lift>0))drawLayer(target,[{path:rimInside,fill:liningFill}]);
  const legSurfaces=legs.map(k=>legPaint(k).filter(it=>it.path).map((it,i)=>({...it,id:k+'-surface-'+i})));
  drawLayer(target,[{path:legPaths.shorts,fill:K.shorts},...legSurfaces.flat()]);
@@ -1286,7 +1287,7 @@ function renderOne(target=fig,preview=true){
  shortsTrim(over,legPaths.overshorts,'kit-over-shorts');
  for(const k of frontArms){
   const {skin,sleeve}=armGeometry[k];
-  drawHand(target,k);const farShoulder=sol[k].A.z < -B.wUpA*.35;drawLayer(target,[skin,armGeometry[k].palm]);drawFistInk(target,k);drawFingers(target,k);drawHandSprite(target,k);
+  drawHand(target,k);drawHandSprite(target,k);const farShoulder=sol[k].A.z < -B.wUpA*.35;drawLayer(target,[skin,armGeometry[k].palm]);drawFistInk(target,k);drawFingers(target,k);
   if(farShoulder&&sleeve.path)el('path',{d:sleeve.path,fill:sleeve.fill,stroke:sleeve.fill,'stroke-width':.8,'stroke-linejoin':'round'},target); // far shoulder: the cap melts into the shirt, no outline bubble
   if(!farShoulder&&sleeve.path){
    // The sleeve lies on the shirt: give it an outline, except around the shoulder joint where sleeve and shirt are one piece.
