@@ -959,7 +959,7 @@ function renderOne(target=fig,preview=true){
    // tay đưa RA TRƯỚC ngực (bàn tay nằm phía trước mặt phẳng ngực trong khung thân) phải vẽ ĐÈ lên thân ở mọi góc nhìn ngang/3-4, kể cả vai xa:
    // nếu không thân sẽ che cẳng tay và tay chỉ "ló" ra với một đường cắt phẳng (ôm/bế người khác ở góc ngang).
    const fz=((S.pose.limbs||{})[k]||[0,0,0])[2];
-   if(fz>B.wUpA*.3&&cs>-.35)return true;
+   if(fz>B.wUpA*.3&&cs>-.35&&A.z>=-B.wUpA*.35)return true;   // chỉ vai GẦN máy; tay phía vai XA vẫn nằm sau thân (thân phải che)
    return (A.z < -B.wUpA*.35)?auto:(cs>.35?true:auto);
   }
   if(side==='back')return cs<-.35?true:(cs>.35?false:auto);
