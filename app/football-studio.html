@@ -960,7 +960,9 @@ function renderOne(target=fig,preview=true){
    // nếu không thân sẽ che cẳng tay và tay chỉ "ló" ra với một đường cắt phẳng (ôm/bế người khác ở góc ngang).
    const fz=((S.pose.limbs||{})[k]||[0,0,0])[2];
    if(fz>B.wUpA*.3&&cs>-.35&&A.z>=-B.wUpA*.35)return true;   // chỉ vai GẦN máy; tay phía vai XA vẫn nằm sau thân (thân phải che)
-   return (A.z < -B.wUpA*.35)?auto:(cs>.35?true:auto);
+   // vai XA máy: khi nhìn ngang/sau lưng (cs ≤ .35) cả cánh tay phải nằm sau thân, thân che lại; chỉ khi camera thấy ngực mới theo 'auto'
+   if(A.z < -B.wUpA*.35)return cs>.35?auto:false;
+   return cs>.35?true:auto;
   }
   if(side==='back')return cs<-.35?true:(cs>.35?false:auto);
   return auto;
