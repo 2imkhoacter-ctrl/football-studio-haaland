@@ -1,0 +1,62 @@
+{
+ "xoe": {
+  "file": "tay_xoe.png",
+  "w": 401,
+  "h": 453
+ },
+ "nam_dam": {
+  "file": "tay_nam_dam.png",
+  "w": 274,
+  "h": 339
+ },
+ "chi_tro": {
+  "file": "tay_chi_tro.png",
+  "w": 251,
+  "h": 441
+ },
+ "rock": {
+  "file": "tay_rock.png",
+  "w": 276,
+  "h": 432
+ },
+ "ngon_cai": {
+  "file": "tay_ngon_cai.png",
+  "w": 322,
+  "h": 363
+ },
+ "phang": {
+  "file": "tay_phang.png",
+  "w": 276,
+  "h": 448
+ },
+ "nam_cong": {
+  "file": "tay_nam_cong.png",
+  "w": 317,
+  "h": 408
+ },
+ "chu_v": {
+  "file": "tay_chu_v.png",
+  "w": 245,
+  "h": 444
+ },
+ "ok": {
+  "file": "tay_ok.png",
+  "w": 313,
+  "h": 444
+ },
+ "buong": {
+  "file": "tay_buong.png",
+  "w": 281,
+  "h": 441
+ },
+ "ngua": {
+  "file": "tay_ngua.png",
+  "w": 361,
+  "h": 361
+ },
+ "ngoac": {
+  "file": "tay_ngoac.png",
+  "w": 252,
+  "h": 426
+ }
+}
