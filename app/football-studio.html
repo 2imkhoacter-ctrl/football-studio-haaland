@@ -1385,9 +1385,12 @@ BODY_UI.forEach(([title,items])=>{
  const box=$('bodySliders'),h=document.createElement('div');h.className='sub';h.textContent=title;box.appendChild(h);
  items.forEach(([label,key,min,max])=>{
   const row=document.createElement('div');row.className='row';
-  row.innerHTML=`<label>${label} <b id="bv_${key}"></b></label><input type="range" id="b_${key}" min="${min}" max="${max}">`;
+  row.innerHTML=`<label>${label} <b id="bv_${key}"></b></label><input type="range" id="b_${key}" min="${min}" max="${max}"><input type="number" id="bn_${key}" step="1" title="Gõ số bất kỳ (không giới hạn): cổ dài, chân dài, đầu to tùy thích" style="width:66px;margin-left:6px">`;
   box.appendChild(row);
-  $('b_'+key).oninput=e=>{if(key==='gap'&&S.bodyLocked){e.target.value=S.body.gap;return}setBody(key,+e.target.value);$('bv_'+key).textContent=S.body[key];render()};
+  $('b_'+key).oninput=e=>{if(key==='gap'&&S.bodyLocked){e.target.value=S.body.gap;return}setBody(key,+e.target.value);$('bv_'+key).textContent=S.body[key];$('bn_'+key).value=S.body[key];render()};
+  // ô số: gõ GIÁ TRỊ BẤT KỲ (vượt giới hạn thanh trượt); thanh trượt tự nới biên theo giá trị
+  $('bn_'+key).onchange=e=>{const v=+e.target.value;if(!isFinite(v)||(key==='gap'&&S.bodyLocked)){e.target.value=S.body[key];return}
+   const r=$('b_'+key);r.min=Math.min(+r.min,v);r.max=Math.max(+r.max,v);setBody(key,v);r.value=S.body[key];$('bv_'+key).textContent=S.body[key];e.target.value=S.body[key];render()};
  });
 });
 // Changing a bone length scales the limb's pose with it (a straight leg stays straight),
@@ -1414,7 +1417,7 @@ function syncLock(){
  const g=$('b_gap');if(g)g.disabled=S.bodyLocked;
 }
 $('bodyLock').onclick=()=>{S.bodyLocked=!S.bodyLocked;syncLock();scheduleSave()};
-function syncBody(){syncLock();for(const k in S.body){const i=$('b_'+k);if(i){i.value=S.body[k];$('bv_'+k).textContent=S.body[k]}}}
+function syncBody(){syncLock();for(const k in S.body){const i=$('b_'+k);if(i){const v=S.body[k];if(typeof v==='number'){i.min=Math.min(+i.min,v);i.max=Math.max(+i.max,v)}i.value=v;$('bv_'+k).textContent=v;const n=$('bn_'+k);if(n)n.value=v}}}
 $('bodyReset').onclick=()=>{if(!confirm('Đặt lại toàn bộ thông số thân hình về mặc định?'))return;S.body=Object.assign({},DEF_BODY);syncBody();render()};
 // ---- wrist / ankle rotation controls
 S.endSel=S.endSel||'hR';
