@@ -32,12 +32,17 @@ for n in NAMES:
         ax, ay, ww, dx, dy = float(xs[sel].mean()), float(ys.max()), float(xs[sel].max() - xs[sel].min()), 0.0, -1.0
     rgb = np.asarray(im)[..., :3].astype(np.float32); sel2 = (np.asarray(im)[..., 3] > 230) & (rgb.sum(axis=2) > 450)
     sk = [int(v) for v in np.median(rgb[sel2], axis=0)] if sel2.any() else [246, 188, 138]
-    # PNG 256 màu có alpha cho nhẹ
-    q = im.quantize(colors=96, method=Image.FASTOCTREE, dither=Image.NONE)
-    buf = io.BytesIO(); q.save(buf, 'PNG', optimize=True)
-    if len(buf.getvalue()) > 60000:
-        buf = io.BytesIO(); im.save(buf, 'PNG', optimize=True)
-    table[n] = {'src': 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode(), 'w': w, 'h': h,
+    # TÁCH HAI LỚP: nét viền (đen, nền trong suốt) + hình khối (trắng, để tool tô màu tùy ý: màu da hoặc màu găng)
+    arr = np.asarray(im).astype(np.float32)
+    a0 = arr[..., 3] / 255.0
+    sk_v = np.array(sk, np.float32)
+    t = np.clip((arr[..., :3] @ sk_v) / float(sk_v @ sk_v), 0, 1)
+    ln = np.stack([np.zeros_like(a0), np.clip(a0 * (1 - t), 0, 1) * 255], axis=-1).astype(np.uint8)
+    fl = np.stack([np.full_like(a0, 255), a0 * 255], axis=-1).astype(np.uint8)
+    def enc(x):
+        bb = io.BytesIO(); Image.fromarray(x, 'LA').save(bb, 'PNG', optimize=True)
+        return 'data:image/png;base64,' + base64.b64encode(bb.getvalue()).decode()
+    table[n] = {'src': enc(ln), 'fl': enc(fl), 'w': w, 'h': h,
                 'sk': sk, 'ax': round(ax, 1), 'ay': round(ay, 1), 'ww': round(max(ww, 8), 1), 'dx': round(dx, 3), 'dy': round(dy, 3), 'two': two}
 body = 'const HAND_SPRITES=' + json.dumps(table, ensure_ascii=False, separators=(',', ':')) + ';'
 block = '/*HANDSPRITES-START*/' + body + '/*HANDSPRITES-END*/'
