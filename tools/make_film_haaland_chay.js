@@ -21,10 +21,22 @@ const THETA = wrap(PHI + (U.pose.yaw || 68));                 // camera đặt s
 // ---- hai dáng chạy từ thế chủ dự án ----
 const A = { limbs: U.pose.limbs, poles: U.pose.poles, ends: U.pose.ends };
 const mirrorV = v => [-v[0], v[1], v[2]];
-const B = { limbs: { hL: mirrorV(A.limbs.hR), hR: mirrorV(A.limbs.hL), fL: mirrorV(A.limbs.fR), fR: mirrorV(A.limbs.fL) },
+const B2F = process.env.HAALAND_POSE_B || 'D:/Download/phim-haaland-chay 2.json';
+let UB = null; try { UB = JSON.parse(fs.readFileSync(B2F, 'utf8')).pose; } catch (e) { UB = null; }
+const B = UB ? { limbs: UB.limbs, poles: UB.poles, ends: UB.ends } : { limbs: { hL: mirrorV(A.limbs.hR), hR: mirrorV(A.limbs.hL), fL: mirrorV(A.limbs.fR), fR: mirrorV(A.limbs.fL) },
   poles: { hL: mirrorV(A.poles.hR), hR: mirrorV(A.poles.hL), fL: mirrorV(A.poles.fR), fR: mirrorV(A.poles.fL) },
   ends: { hL: A.ends.hR.slice(), hR: A.ends.hL.slice(), fL: A.ends.fR.slice(), fR: A.ends.fL.slice() } };
 const mixV = (a, b, u) => a.map((v, i) => mix(v, b[i], u));
+// nội suy theo CUNG (slerp hướng + trộn độ dài): tay/chân vung như con lắc, KHÔNG đi xuyên qua vai/hông như nội suy thẳng
+const slerpV = (a, b, u) => {
+  const la = Math.hypot(...a), lb = Math.hypot(...b);
+  if (la < 1e-6 || lb < 1e-6) return mixV(a, b, u);
+  const na = a.map(v => v / la), nb = b.map(v => v / lb);
+  const d = clamp(na[0] * nb[0] + na[1] * nb[1] + na[2] * nb[2], -1, 1), w = Math.acos(d);
+  if (w < 1e-3) return mixV(a, b, u);
+  const sa = Math.sin((1 - u) * w) / Math.sin(w), sb = Math.sin(u * w) / Math.sin(w), L = mix(la, lb, u);
+  return na.map((v, i) => (sa * v + sb * nb[i]) * L);
+};
 const CAD = +(process.env.CAD || 2.0);                         // chu kỳ chạy (hai bước) mỗi giây
 
 const hero = {
@@ -33,7 +45,10 @@ const hero = {
   faces: [{ t0: 0, t1: DUR + 1, e: 'focus' }],
   mod: (t, key, c) => {
     const ph = 2 * Math.PI * CAD * Math.max(0, t - START * 0.5), u = 0.5 - 0.5 * Math.cos(ph);   // 0 = dáng A, 1 = dáng B
-    for (const k of ['hL', 'hR', 'fL', 'fR']) { key.limbs[k] = mixV(A.limbs[k], B.limbs[k], u); key.poles[k] = mixV(A.poles[k], B.poles[k], u); }
+    for (const k of ['hL', 'hR', 'fL', 'fR']) { key.limbs[k] = slerpV(A.limbs[k], B.limbs[k], u); key.poles[k] = mixV(A.poles[k], B.poles[k], u); }
+    const fwdR = Math.sin(ph) > 0;                                // nửa chu kỳ đầu chân phải bước tới, nửa sau chân trái
+    const lift = 30 * Math.abs(Math.sin(ph));                      // chân đang vung tới được NHẤC lên (gối cao)
+    key.limbs[fwdR ? 'fR' : 'fL'][1] -= lift;
     for (const k of ['hL', 'hR', 'fL', 'fR']) key.ends[k] = mixV(A.ends[k], B.ends[k], u);
     for (const k of ['hL', 'hR']) key.ends[k] = [6, 0, 0, 50];   // bàn tay KHÉP 50% (độ nắm 50), lòng bàn tay luôn hướng vào thân (lật = 0, mặc định của tool)
     key.rotFine = U.pose.rotFine; key.type = U.pose.type || 0;
