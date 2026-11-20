@@ -11,7 +11,8 @@ const H = R('data/characters/haaland-final.json');
 const FPS = 24, DUR = 15.07, N = Math.round(DUR * FPS), o = { FPS, N };
 const ease = (t, a, b) => S(clamp((t - a) / (b - a), 0, 1));
 const CUT1 = 6.08, CUT2 = 8.08, WHIP = 11.6, FADE0 = 14.25;
-const Z0 = 12;                                     // độ sâu chung của nhóm nhân vật (mét)
+const Z0 = 12;
+const CX = +(process.env.CX || -0.15), LIFT = +(process.env.LIFT || 190), ROT = +(process.env.ROT || 80);                                     // độ sâu chung của nhóm nhân vật (mét)
 
 // ---- người nộm (mặc định tool: đầu trơn, da xám nhạt); chỉ đổi màu áo để phân vai ----
 const mannequin = (shirt, shorts, extra) => ({
@@ -30,7 +31,7 @@ const wave = (t, ph) => Math.sin(2 * Math.PI * 1.6 * t + ph);
 // ---- diễn viên chính: "HLV" (đầu Haaland có khuôn mặt vector để diễn biểu cảm) ----
 const coachPos = t => {
   if (t < CUT1) return [mix(3.4, 1.35, ease(t, 0.7, 2.2)), Z0];        // cảnh 1: vào từ mép PHẢI, đứng gần máy
-  return [-0.35, Z0];                                           // cảnh 2-3: được "bế" cạnh nhân vật áo khoác
+  return [CX, Z0 - 1.55];                                             // nằm ngang trước ngực nhân vật áo khoác (gần máy hơn một chút để vẽ ĐÈ lên)                                           // cảnh 2-3: được "bế" cạnh nhân vật áo khoác
 };
 const coach = {
   pos: Array.from({ length: N + 1 }, (_, i) => { const t = i / FPS, p = coachPos(t); return [t, p[0], p[1]]; }),
@@ -44,13 +45,15 @@ const coach = {
       Object.assign(f, { browKind: 'sad', mouthKind: 'smirk', mouthOpen: 0, lidL: 30, lidR: 30, lookY: 25 });
       if (t > 2.0) key.hrot = r2(-6 * ease(t, 2.0, 2.8));              // nghiêng đầu
       key.hip[1] += 0;
-    } else {                                                           // bị bế: chân lơ lửng, tay thõng, mặt mếu
+    } else {                                                           // ĐƯỢC BẾ: "Xoay lật toàn thân" (rotFine) cho nằm ngang, nhấc hông lên ngang tay người bế, tay chéo ngực
       const wob = Math.sin(2 * Math.PI * 0.9 * t);
-      key.hip[1] -= 55 * c.kl; for (const s of ['fL', 'fR']) key.limbs[s][1] -= 30 * c.kl; key.limbs.fL[2] += 12 * c.kl * wob; key.limbs.fR[2] -= 10 * c.kl * wob;
-      key.limbs.hL = [-18 * k, 118 * k, 6 * k]; key.limbs.hR = [18 * k, 118 * k, 6 * k];
+      key.rotFine = r2(ROT + 3 * wob);
+      key.hip[1] -= LIFT; key.hip[0] += 0;
+      key.limbs.hL = [20 * k, 60 * k, 55 * k]; key.limbs.hR = [-20 * k, 65 * k, 60 * k];
+      for (const s of ['fL', 'fR']) key.limbs[s][1] -= 8 * c.kl;
       const cry = t > CUT2 + 0.5;
-      Object.assign(f, { browKind: cry ? 'sad' : 'sad', mouthKind: cry ? 'sad' : 'closed', mouthOpen: 0, lidL: cry ? 35 : 20, lidR: cry ? 35 : 20, lookY: 30, browThick: 140 });
-      key.hrot = r2(-8 + 6 * wob);
+      Object.assign(f, { browKind: 'sad', mouthKind: cry ? 'sad' : 'closed', mouthOpen: 0, lidL: cry ? 35 : 20, lidR: cry ? 35 : 20, lookY: 30, browThick: 140 });
+      key.hrot = r2(-6 + 5 * wob);
     }
   },
 };
