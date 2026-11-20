@@ -1,62 +1,62 @@
 {
- "xoe": {
-  "file": "tay_xoe.png",
+ "mu_xoe": {
+  "file": "tay_mu_xoe.png",
   "w": 401,
-  "h": 453
+  "h": 454
  },
- "nam_dam": {
-  "file": "tay_nam_dam.png",
+ "mu_nam": {
+  "file": "tay_mu_nam.png",
   "w": 274,
   "h": 339
  },
- "chi_tro": {
-  "file": "tay_chi_tro.png",
-  "w": 251,
-  "h": 441
+ "phang_nghieng": {
+  "file": "tay_phang_nghieng.png",
+  "w": 277,
+  "h": 446
  },
- "rock": {
-  "file": "tay_rock.png",
-  "w": 276,
-  "h": 432
+ "nam_nghieng": {
+  "file": "tay_nam_nghieng.png",
+  "w": 270,
+  "h": 343
  },
- "ngon_cai": {
-  "file": "tay_ngon_cai.png",
-  "w": 322,
-  "h": 363
+ "ben_chi_tro": {
+  "file": "tay_ben_chi_tro.png",
+  "w": 364,
+  "h": 335
  },
- "phang": {
-  "file": "tay_phang.png",
-  "w": 276,
+ "ben_rock": {
+  "file": "tay_ben_rock.png",
+  "w": 283,
   "h": 448
  },
- "nam_cong": {
-  "file": "tay_nam_cong.png",
-  "w": 317,
+ "dan_ngon": {
+  "file": "tay_dan_ngon.png",
+  "w": 403,
+  "h": 375
+ },
+ "chap_tay": {
+  "file": "tay_chap_tay.png",
+  "w": 348,
+  "h": 448
+ },
+ "khum_ngua": {
+  "file": "tay_khum_ngua.png",
+  "w": 394,
+  "h": 300
+ },
+ "nam_chat": {
+  "file": "tay_nam_chat.png",
+  "w": 314,
   "h": 408
  },
- "chu_v": {
-  "file": "tay_chu_v.png",
+ "mu_chu_v": {
+  "file": "tay_mu_chu_v.png",
   "w": 245,
-  "h": 444
+  "h": 440
  },
- "ok": {
-  "file": "tay_ok.png",
-  "w": 313,
-  "h": 444
- },
- "buong": {
-  "file": "tay_buong.png",
-  "w": 281,
-  "h": 441
- },
- "ngua": {
-  "file": "tay_ngua.png",
-  "w": 361,
-  "h": 361
- },
- "ngoac": {
-  "file": "tay_ngoac.png",
-  "w": 252,
-  "h": 426
+ "ba_ngon": {
+  "file": "tay_ba_ngon.png",
+  "w": 254,
+  "h": 448
  }
 }

@@ -1,5 +1,5 @@
 """Cắt tờ ảnh 12 bàn tay (nền xanh lá) thành 12 file PNG nền trong suốt + hands.json (điểm cổ tay, độ rộng cổ tay).
-Dùng: python tools/cat_tay_ve_san.py <to_anh.webp|png> [thu_muc_ra=assets/hands]
+Dùng: python tools/cat_tay_ve_san.py <to_anh.webp|png> [thu_muc_ra=assets/hands] [ten1,ten2,...12 tên theo thứ tự đọc]
 Tờ ảnh: 4 cột x 3 hàng, thứ tự đọc: xòe, nắm đấm, chỉ trỏ, rock, ngón cái, phẳng, nắm cong, chữ V, OK, buông, ngửa, ngoắc.
 Tách nền bằng độ trội xanh lá (g - max(r,b)); đã bỏ ám xanh ở viền; bỏ dấu sao Gemini ở góc."""
 import sys, json, os
@@ -22,7 +22,7 @@ g2 = np.where(spill, np.minimum(g, np.maximum(r, b)), g)
 rgba = np.dstack([r, g2, b, alpha * 255]).astype(np.uint8)
 full = Image.fromarray(rgba, 'RGBA')
 
-NAMES = ['xoe', 'nam_dam', 'chi_tro', 'rock', 'ngon_cai', 'phang', 'nam_cong', 'chu_v', 'ok', 'buong', 'ngua', 'ngoac']
+NAMES = sys.argv[3].split(',') if len(sys.argv) > 3 else ['xoe', 'nam_dam', 'chi_tro', 'rock', 'ngon_cai', 'phang', 'nam_cong', 'chu_v', 'ok', 'buong', 'ngua', 'ngoac']
 cw, ch = W / 4, H / 3
 meta = {}
 for i, name in enumerate(NAMES):
