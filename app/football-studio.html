@@ -89,6 +89,8 @@ input[type=file]{font-size:12px;max-width:100%}
    <div class="row"><button id="holeAuto">Cổ áo tự khớp cổ đầu: BẬT</button></div>
   </div>
   <div class="box"><h3>TƯ THẾ</h3>
+   <div class="row"><label for="posePreset">Thế mẫu (học từ video)</label><select id="posePreset"></select></div>
+   <div class="row"><button id="poseUndo" type="button">↩ Hoàn tác thế mẫu</button></div>
    <div class="row"><button id="viniPreset">Vini số 7 · dáng co chân</button><button id="viniUndo" hidden>Khôi phục trước khi thử</button></div>
    <div class="row"><button id="mirror">Lật gương</button><button id="reset">Về tư thế đứng</button></div>
    <div class="row"><input type="text" id="poseName" placeholder="Tên tư thế (vd: Sút bóng)" style="flex:1 1 140px;width:auto"><button id="savePose">Lưu tư thế</button></div>
@@ -213,6 +215,8 @@ input[type=file]{font-size:12px;max-width:100%}
   <div class="box"><h3>CAMERA (máy quay thật)</h3>
     <div class="sub">Chỉ hoạt động trên "sân đêm 360°". Bật camera thật thì người và sân co giãn đúng tỉ lệ khi zoom/đổi góc. Tắt thì mọi thứ y như cũ.</div>
     <div class="row"><label><input id="cam3d" type="checkbox"> Dùng camera thật</label></div>
+    <div class="sub" style="margin-top:8px"><b>Hiệu ứng khung hình / chuyển cảnh</b> (đặt bằng key để làm chuyển cảnh)</div>
+    <div id="fxSliders"></div>
     <div id="camBox" hidden>
      <div class="row"><label>Nhắm vào</label><select id="camTarget"></select><button id="camAim" type="button">Nhắm</button></div>
      <div class="grid4"><button type="button" data-cp="wide">Toàn cảnh</button><button type="button" data-cp="full">Toàn thân</button><button type="button" data-cp="half">Nửa người</button><button type="button" data-cp="face">Cận mặt</button></div>
@@ -1410,7 +1414,7 @@ $('holeAuto').onclick=()=>{S.body.holeAuto=S.body.holeAuto?0:1;syncHoleAuto();re
 // A prop is a drawn object with its own position / size / spin / layer. It is either FREE (stage coordinates) or ATTACHED to a hand / foot
 // (then x,y are an offset from that joint, so the ball follows the kicking foot). Everything is part of the keyframes.
 const PROP_DEF={
- scene:{show:true,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,tilt:10,style:'night360',dof:0,free:0,camX:300,camY:640,ty:0,camH:0,cam3d:0,camYaw:0,dist:2.4,focal:600},
+ scene:{show:true,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,tilt:10,style:'night360',dof:0,free:0,camX:300,camY:640,ty:0,camH:0,cam3d:0,camYaw:0,dist:2.4,focal:600,fade:0,bars:0,zb:0,spark:0},
  ball:{show:false,layer:'front',attach:'free',x:430,y:612,size:100,rot:0,style:'png',h:0,fire:0,vx:0,vz:0},
  trophy:{show:false,layer:'front',attach:'free',x:150,y:540,size:100,rot:0,style:'png'},
  goal:{show:false,layer:'back',attach:'free',x:300,y:640,size:100,rot:0,style:'draw'}
@@ -1717,7 +1721,7 @@ function camInit(){
  };
 }
 function syncCamUI(){
- if(!$('cam3d'))return;camInit();
+ if(!$('cam3d'))return;camInit();fxSync();
  const sc=S.props.scene,on=sc.cam3d>0;
  $('cam3d').checked=on;$('camBox').hidden=!on;$('cutNext').checked=!!S.cutNext;
  for(const [,key] of CAM_SL){$('cs_'+key).value=sc[key];$('cv_'+key).textContent=Math.round(sc[key]*10)/10}
@@ -1725,6 +1729,111 @@ function syncCamUI(){
  const list=$('shotList');list.innerHTML='';
  S.shots.forEach((s,i)=>{const d=document.createElement('div');const b=document.createElement('button');b.textContent='🎥 '+s.name;b.onclick=()=>{Object.assign(S.props.scene,s.cam);syncCamUI();render()};const x=document.createElement('button');x.textContent='✕';x.onclick=()=>{S.shots.splice(i,1);syncCamUI();scheduleSave()};d.append(b,x);list.appendChild(d)});
 }
+// ===== HIỆU ỨNG KHUNG HÌNH: màn đen, viền đen, nhòe tỏa tâm, lấp lánh (tất cả mặc định 0 = tắt) =====
+const FX_SL=[['Màn đen (fade)','fade',0,100,1],['Viền đen trên/dưới (px)','bars',0,420,2],['Nhòe tỏa từ tâm (zoom blur)','zb',0,100,1],['Lấp lánh nhấp nháy','spark',0,100,1]];
+function fxInit(){
+ const box=$('fxSliders');if(!box||box.children.length)return;
+ for(const [label,key,mn,mx,st] of FX_SL){
+  const r=document.createElement('div');r.className='row';
+  r.innerHTML=`<label>${label} <b id="fv_${key}">0</b></label><input type="range" id="fs_${key}" min="${mn}" max="${mx}" step="${st}">`;box.appendChild(r);
+  $('fs_'+key).oninput=e=>{S.props.scene[key]=+e.target.value;$('fv_'+key).textContent=e.target.value;render()};
+ }
+}
+function fxSync(){fxInit();const sc=S.props.scene;for(const [,key] of FX_SL){const el=$('fs_'+key);if(el){el.value=sc[key]||0;$('fv_'+key).textContent=Math.round((sc[key]||0)*10)/10}}}
+function updateFx(){
+ const sc=S.props&&S.props.scene;let fx=document.getElementById('fxLayer');
+ const on=sc&&sc.show&&sc.style==='night360'&&((sc.fade||0)>0||(sc.bars||0)>0||(sc.zb||0)>0||(sc.spark||0)>0);
+ if(!on){if(fx)fx.replaceChildren();return}
+ const NS='http://www.w3.org/2000/svg',mk=(tag,at,par)=>{const e=document.createElementNS(NS,tag);for(const k in at)e.setAttribute(k,at[k]);if(par)par.appendChild(e);return e};
+ if(!fx){fx=mk('g',{id:'fxLayer','pointer-events':'none'});svg.insertBefore(fx,handles)}
+ fx.replaceChildren();
+ const [vx,vy,vw,vh]=(svg.getAttribute('viewBox')||'0 0 600 720').split(/\s+/).map(Number),cx=vx+vw/2,cy=vy+vh/2;
+ if(sc.zb>0){const k=sc.zb/100,N=8;for(let i=N;i>=1;i--)mk('use',{href:'#fig',transform:`translate(${cx} ${cy}) scale(${1+.03*k*i}) translate(${-cx} ${-cy})`,opacity:.22*(1-i/(N+1))*(0.4+0.6*k)},fx)}
+ if(sc.spark>0){
+  const t=Number(S.t)||0,a=sc.spark/100;
+  for(let i=0;i<16;i++){
+   const h=n=>{const x=Math.sin((i+1)*12.9898+n*78.233)*43758.5453;return x-Math.floor(x)};
+   const x=vx+h(1)*vw,y=vy+h(2)*vh,r=6+h(3)*10,ph=h(4),pulse=Math.pow(Math.max(0,Math.sin(2*Math.PI*(t*(.8+h(5)*.6)+ph))),3)*a;
+   if(pulse<.03)continue;
+   mk('path',{d:`M${x} ${y-r}Q${x} ${y} ${x+r} ${y}Q${x} ${y} ${x} ${y+r}Q${x} ${y} ${x-r} ${y}Q${x} ${y} ${x} ${y-r}Z`,fill:'#fff',opacity:pulse},fx);
+  }
+ }
+ if(sc.bars>0){mk('rect',{x:vx-50,y:vy-50,width:vw+100,height:sc.bars+50,fill:'#000'},fx);mk('rect',{x:vx-50,y:vy+vh-sc.bars,width:vw+100,height:sc.bars+50,fill:'#000'},fx)}
+ if(sc.fade>0)mk('rect',{x:vx-50,y:vy-50,width:vw+100,height:vh+100,fill:'#000',opacity:Math.min(1,sc.fade/100)},fx);
+}
+// ===== THẾ MẪU (học từ video mẫu; viết lại bằng lời mình) =====
+// Mỗi thế đặt: tay (vai->tay), chân (hông->chân), thân xoay (rotFine), độ cao hông. Tự co theo độ dài tay chân của nhân vật.
+const POSE_PRESETS=[
+ ['Cơ bản','idle','Đứng nghiêm, tay buông'],
+ ['Cơ bản','hips','Chống hông hai tay'],
+ ['Cơ bản','cross','Khoanh tay'],
+ ['Cơ bản','think','Tay chống cằm suy nghĩ'],
+ ['Cơ bản','shrug','Nhún vai'],
+ ['Cơ bản','fists','Nắm đấm tức giận'],
+ ['Cơ bản','reach','Đưa tay ra trước'],
+ ['Ăn mừng','wide','Dang hai tay ngang'],
+ ['Ăn mừng','armsV','Giơ hai tay chữ V'],
+ ['Ăn mừng','wave','Vẫy tay'],
+ ['Ăn mừng','handsHead','Hai tay đặt lên đầu'],
+ ['Ăn mừng','clap','Vỗ tay trước ngực'],
+ ['Ăn mừng','kneelPray','Quỳ một gối, chắp tay'],
+ ['Ăn mừng','hang','Treo ngược, dang tay'],
+ ['Vật cầm trên tay','holdBall','Ôm bóng trước ngực'],
+ ['Vật cầm trên tay','trophyHip','Giơ cúp cao + chống hông'],
+ ['Vật cầm trên tay','shirtUp','Giơ áo ngang đầu + tay móc quần'],
+ ['Vật cầm trên tay','heroShirt','Dáng ngôi sao: chống hông + giơ áo qua đầu'],
+ ['Thể thao','defend','Phòng thủ: dang tay, chân rộng'],
+ ['Thể thao','flyKick','Đá cao (có thể trượt cả khối)'],
+ ['Thể thao','keeperDive','Thủ môn bay người']
+];
+let poseBefore=null;
+function posePresetData(id){
+ const B=S.body,armL=B.upA+B.foreA,legL=B.thigh+B.shin,ka=armL/164,kl=legL/241,footY=.975*legL,footX=B.hipW*.39,hipStand=640-1.2*B.shoe-.975*legL;
+ const a=v=>v.map(x=>x*ka),stand=(w=1)=>({fL:[-footX*w,footY,0],fR:[footX*w,footY,0]});
+ const rest=[.14*armL,.93*armL,0];
+ const P={
+  idle:{hL:[-rest[0],rest[1],0],hR:[rest[0],rest[1],0],...stand()},
+  hips:{hL:a([-70,95,-10]),hR:a([70,95,-10]),...stand(1.2)},
+  cross:{hL:a([20,55,55]),hR:a([-20,60,60]),...stand()},
+  think:{hR:a([25,-55,75]),hL:a([-35,110,-10]),...stand()},
+  shrug:{hL:a([-85,60,50]),hR:a([85,60,50]),...stand()},
+  fists:{hL:a([-45,80,55]),hR:a([45,80,55]),...stand(1.3)},
+  reach:{hR:a([60,10,115]),hL:[-rest[0],rest[1],0],...stand()},
+  wide:{hL:a([-150,10,0]),hR:a([150,10,0]),...stand(1.3)},
+  armsV:{hL:a([-40,-140,10]),hR:a([40,-140,10]),...stand(1.2)},
+  wave:{hR:a([45,-112,15]),hL:[-rest[0],rest[1],0],...stand()},
+  handsHead:{hL:a([-34,-88,38]),hR:a([34,-88,38]),...stand()},
+  clap:{hL:a([-12,40,100]),hR:a([12,40,100]),...stand()},
+  kneelPray:{hL:a([-12,-35,85]),hR:a([12,-35,85]),fL:[-footX,footY-120*kl,95*kl],fR:[footX,footY-120*kl,-57*kl],hipY:hipStand+120*kl},
+  hang:{hL:a([-150,10,0]),hR:a([150,10,0]),...stand(),rot:180,hipY:hipStand-140*kl},
+  holdBall:{hL:a([-30,50,90]),hR:a([30,50,90]),...stand()},
+  trophyHip:{hR:a([48,-128,12]),hL:a([-70,95,-10]),...stand(1.7)},
+  shirtUp:{hR:a([45,-118,22]),hL:a([-30,80,10]),...stand(.8)},
+  heroShirt:{hL:a([-70,95,-10]),hR:a([35,-138,18]),fL:[-footX*1.2,footY,18*kl],fR:[footX*.9,footY*.99,-10*kl],rot:3},
+  defend:{hL:a([-95,55,35]),hR:a([95,55,35]),...stand(1.7)},
+  flyKick:{hL:a([-60,60,-40]),hR:a([60,50,-30]),fL:[-footX,footY,0],fR:[footX,footY-70*kl,150*kl],rot:-14},
+  keeperDive:{hL:a([-40,-150,20]),hR:a([40,-150,20]),fL:[-12,.88*footY,-10],fR:[12,.88*footY,-10],rot:78,hipY:548}
+ };
+ return P[id]&&{...P[id],hipStand};
+}
+function applyPosePreset(id){
+ const d=posePresetData(id);if(!d)return;
+ const P=S.pose;
+ poseBefore={limbs:JSON.parse(JSON.stringify(P.limbs)),hip:P.hip.slice(),rotFine:P.rotFine,yaw:P.yaw};
+ for(const k of ['hL','hR','fL','fR'])if(d[k])P.limbs[k]=d[k].map(v=>Math.round(v*100)/100);
+ P.rotFine=d.rot||0;P.hip=[P.hip[0],d.hipY||d.hipStand];
+ syncAll&&syncAll();render();
+}
+function poseInit(){
+ const sel=$('posePreset');if(!sel||sel.options.length)return;
+ sel.appendChild(Object.assign(document.createElement('option'),{value:'',textContent:'— chọn thế mẫu —'}));
+ const groups={};
+ for(const [g,id,name] of POSE_PRESETS){(groups[g]||(groups[g]=Object.assign(document.createElement('optgroup'),{label:g}))).appendChild(Object.assign(document.createElement('option'),{value:id,textContent:name}))}
+ for(const g in groups)sel.appendChild(groups[g]);
+ sel.onchange=()=>{if(sel.value){applyPosePreset(sel.value);sel.value=''}};
+ $('poseUndo').onclick=()=>{if(!poseBefore)return;S.pose.limbs=poseBefore.limbs;S.pose.hip=poseBefore.hip;S.pose.rotFine=poseBefore.rotFine;poseBefore=null;syncAll&&syncAll();render()};
+}
+poseInit();
 S.propSel=S.propSel||'ball';
 PROP_NAMES.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;$('pkSel').appendChild(o)});
 const PROP_UI=[['Ngang (tự do: toạ độ; gắn: lệch)','x',-200,800],['Cao / thấp (tự do: toạ độ; gắn: lệch)','y',-200,800],['To / nhỏ (%)','size',20,400],['Xoay / lăn (độ)','rot',-720,720]];
@@ -2430,6 +2539,7 @@ function render(target=fig,preview=true){
  if(nightScene()&&S.nightLock!==false&&S.pose&&S.pose.hip)S.pose.hip[0]=300;
  {const sc1=S.props&&S.props.scene;if(sc1&&sc1.cam3d>0&&nightScene())S.pose.yaw=wrap((sc1.camYaw||0)-(sc1.rot||0))} // camera thật: người giữ hướng cố định trên sân, xoay camera không kéo người xoay theo
  renderOne(target,preview);drawCast(target,'front');
+ if(target===fig&&typeof updateFx==='function')updateFx();
 }
 // Nút khóa/mở khóa: mở khóa = kéo hông tự do như cũ (chân có thể trượt khi xoay camera);
 // khóa lại = vị trí đang thấy được đổi thành tọa độ sân rồi mới khóa, nên người không nhảy chỗ.
