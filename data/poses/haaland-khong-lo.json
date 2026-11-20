@@ -1,0 +1,6 @@
+{"_ghi_chu":"Thử dựng 'Haaland khổng lồ' (thân bự, chân nhỏ, tay siêu dài, chạy với tay vươn tới bóng) bằng chính tool; mình đặt bằng số, bạn chỉnh tay tiếp (2026-11-20). Nạp bằng cách gõ vào ô số THÂN HÌNH và đặt dáng.",
+ "body":{"chest":150,"waist":135,"hipW":80,"torsoH":190,"depthK":140,"depthW":130,"depthH":110,"upA":130,"foreA":115,"wUpA":70,"wFore":52,"thigh":60,"shin":58,"wThigh":34,"wShin":24,"hand":20,"handS":140,"neck":20},
+ "look":{"shirt":"#d9352f","shorts":"#f4f4f4","socks":"#1a2a6c","numc":"#ffffff","num":9},
+ "headSize":118,
+ "pose":{"yaw":90,"rotFine":24,"limbs":{"hR":[40,95,235],"hL":[-40,40,-175],"fR":[0,70,95],"fL":[0,112,-75]},"poles":{"hR":[0.2,1,0],"hL":[-0.2,1,0],"fR":[0,0.2,1],"fL":[0,0.2,-1]}},
+ "ball":{"show":true}}
